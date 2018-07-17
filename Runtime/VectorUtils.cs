@@ -166,6 +166,23 @@ namespace Unity.VectorGraphics
             };
         }
 
+        /// <summary>Converts a quadratic bezier to a cubic bezier</summary>
+        /// <param name="p0">The starting position of the quadratic segment</param>
+        /// <param name="p1">The control position of the quadratic segment</param>
+        /// <param name="p2">The ending position of the quadratic segment</param>
+        /// <returns>The resulting BezierSegment</returns>
+        public static BezierSegment QuadraticToCubic(Vector2 p0, Vector2 p1, Vector2 p2)
+        {
+            var p = p1;
+            var t = 2.0f / 3.0f;
+            return new BezierSegment() {
+                P0 = p0,
+                P1 = p0 + t * (p - p0),
+                P2 = p2 + t * (p - p2),
+                P3 = p2,
+            };
+        }
+
         /// <summary>Builds a line path segment.</summary>
         /// <param name="from">The starting position of the line segment</param>
         /// <param name="to">The ending position of the line segment</param>

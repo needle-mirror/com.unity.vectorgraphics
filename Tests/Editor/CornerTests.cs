@@ -5,10 +5,11 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Experimental.U2D;
+using UnityEngine.Experimental.Rendering;
 using Unity.VectorGraphics;
 using Unity.VectorGraphics.Editor;
-using UnityEngine.Experimental.Rendering;
-using UnityEngine.Experimental.U2D;
 
 public class CornerTests : MonoBehaviour
 {

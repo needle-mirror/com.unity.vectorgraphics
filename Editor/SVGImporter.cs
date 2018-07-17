@@ -178,9 +178,11 @@ namespace Unity.VectorGraphics.Editor
             var bbox = VectorUtils.ApproximateSceneNodeBounds(sceneInfo.Scene.Root);
             float maxDim = Mathf.Max(bbox.width, bbox.height);
 
+            float ppuRatio = Mathf.Clamp(1.0f / (pixelsPerUnit / 100.0f), 0.1f, 10.0f);
+
             // The scene ratio gives a rough estimate of coverage % of the vector scene on the screen.
             // Higher values should result in a more dense tessellation.
-            float sceneRatio = (targetResolution * multiplier) / maxDim;
+            float sceneRatio = ((targetResolution * multiplier * ppuRatio) / maxDim);
 
             stepDist = float.MaxValue; // No need for uniform step distance
             maxCord = 0.5f / sceneRatio;

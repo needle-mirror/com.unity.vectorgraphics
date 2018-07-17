@@ -9,6 +9,7 @@ using UnityEditor;
 using UnityEditor.Experimental.AssetImporters;
 using UnityEngine.Experimental.U2D;
 using UnityEngine.Experimental.Rendering;
+using UnityEngine.Rendering;
 
 namespace Unity.VectorGraphics.Editor
 {
@@ -103,7 +104,10 @@ namespace Unity.VectorGraphics.Editor
         public override void OnInspectorGUI()
         {
             EditorGUILayout.PropertyField(m_PixelsPerUnit, m_PixelsPerUnitText);
+            m_PixelsPerUnit.floatValue = Mathf.Max(0.001f, m_PixelsPerUnit.floatValue);
+
             EditorGUILayout.PropertyField(m_GradientResolution, m_GradientResolutionText);
+            m_GradientResolution.intValue = Math.Min(4096, Math.Max(16, m_GradientResolution.intValue));
 
             m_Alignment.intValue = EditorGUILayout.Popup(m_AlignmentText, m_Alignment.intValue, m_AlignmentOptions);
 
@@ -244,6 +248,9 @@ namespace Unity.VectorGraphics.Editor
         private string GetStatsString()
         {
             var sprite = SVGImporter.GetImportedSprite(assetTarget);
+            if (sprite == null)
+                return "";
+            
             int vertexCount = sprite.vertices.Length;
             int indexCount = sprite.triangles.Length;
 

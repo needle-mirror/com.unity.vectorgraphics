@@ -80,6 +80,13 @@ namespace Unity.VectorGraphics
             if (tessellateOptions.StepDistance < Epsilon)
                 throw new Exception("stepDistance too small");
 
+            if (contour.Segments.Length < 2)
+            {
+                vertices = new Vector2[0];
+                indices = new UInt16[0];
+                return;
+            }
+
             UnityEngine.Profiling.Profiler.BeginSample("TessellatePath");
 
             float[] segmentLengths = VectorUtils.SegmentsLengths(contour.Segments, contour.Closed);
@@ -107,7 +114,7 @@ namespace Unity.VectorGraphics
             {
                 if (patternIt.IsSolid)
                     TessellateRange(patternIt.SegmentLength, pathIt, patternIt, pathProps, tessellateOptions, joiningInfo, segmentLengths, approxTotalLength, rangeIndex++, verts, inds);
-                else 
+                else
                     SkipRange(patternIt.SegmentLength, pathIt, patternIt, pathProps, joiningInfo, segmentLengths);
                 patternIt.Advance();
             }
@@ -122,6 +129,9 @@ namespace Unity.VectorGraphics
         {
             if (tessellateOptions.StepDistance < Epsilon)
                 throw new Exception("stepDistance too small");
+
+            if (contour.Segments.Length < 2)
+                return new Vector2[0];
 
             float[] segmentLengths = VectorUtils.SegmentsLengths(contour.Segments, contour.Closed);
 

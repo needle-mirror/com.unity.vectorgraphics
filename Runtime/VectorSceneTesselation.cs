@@ -53,7 +53,7 @@ namespace Unity.VectorGraphics
             UnityEngine.Profiling.Profiler.BeginSample("TessellateVectorScene");
 
             VectorClip.ResetClip();
-            var geoms = TessellateNodeHierarchyRecursive(scene.Root, tessellationOptions, Matrix2D.identity, 1.0f, nodeOpacities);
+            var geoms = TessellateNodeHierarchyRecursive(scene.Root, tessellationOptions, scene.Root.Transform, 1.0f, nodeOpacities);
 
             foreach (var geom in geoms)
                 FlipShapeIfNecessary(geom.Vertices, geom.Indices);

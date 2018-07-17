@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Linq;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.Experimental.U2D;
 using UnityEngine.Experimental.Rendering;
 

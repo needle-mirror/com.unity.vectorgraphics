@@ -984,7 +984,6 @@ namespace Unity.VectorGraphics
             styleResolver.PushNode(node);
 
             ParseOpacity(sceneNode);
-            sceneNode.Transform = SVGAttribParser.ParseTransform(node);
 
             var sceneViewport = ParseViewport(node, sceneNode, new Vector2(windowWidth, windowHeight));
             ApplyViewBox(sceneNode, ParseViewBox(node, sceneNode, sceneViewport), sceneViewport);
@@ -2112,7 +2111,8 @@ namespace Unity.VectorGraphics
             }
             if (colorString.StartsWith("rgb(") && colorString.EndsWith(")"))
             {
-                string[] numbers = colorString.Split(new char[] { ',', '%' }, StringSplitOptions.RemoveEmptyEntries);
+                string numbersString = colorString.Substring(4, colorString.Length-5);
+                string[] numbers = numbersString.Split(new char[] { ',', '%' }, StringSplitOptions.RemoveEmptyEntries);
                 if (numbers.Length != 3)
                     throw new Exception("Invalid rgb() color specification");
                 float divisor = colorString.Contains("%") ? 100.0f : 255.0f;
@@ -2380,7 +2380,7 @@ namespace Unity.VectorGraphics
                 }
             }
 
-            var clr = ParseColor(paintParts[0]);
+            var clr = ParseColor(string.Join("", paintParts));
             clr.a = opacity;
             if (paintParts.Length > 1)
             {

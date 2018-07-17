@@ -75,7 +75,7 @@ namespace Unity.VectorGraphics
                 geoms.Add(new Geometry() { Vertices = vertices, Indices = indices, Color = color, Fill = rect.Fill, FillTransform = rect.FillTransform });
             }
 
-            if (rect.PathProps.Stroke != null)
+            if (rect.PathProps.Stroke != null && rect.PathProps.Stroke.HalfThickness > VectorUtils.Epsilon)
             {
                 Vector2[] vertices;
                 UInt16[] indices;

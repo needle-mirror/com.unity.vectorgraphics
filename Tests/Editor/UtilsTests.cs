@@ -227,6 +227,22 @@ public class UtilsTests
     }
 
     [Test]
+    public void QuadraticToCubic_ReturnsCubicSegment()
+    {
+        var seg = VectorUtils.QuadraticToCubic(
+            new Vector2(0.0f, 0.0f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(1.0f, 0.0f)
+        );
+
+        Assert.AreEqual(new Vector2(0.0f, 0.0f), VectorUtils.Eval(seg, 0.0f));
+        Assert.AreEqual(new Vector2(0.25f, 0.1875f), VectorUtils.Eval(seg, 0.25f));
+        Assert.AreEqual(new Vector2(0.5f, 0.25f), VectorUtils.Eval(seg, 0.5f));
+        Assert.AreEqual(new Vector2(0.75f, 0.1875f), VectorUtils.Eval(seg, 0.75f));
+        Assert.AreEqual(new Vector2(1.0f, 0.0f), VectorUtils.Eval(seg, 1.0f));
+    }
+
+    [Test]
     public void MakePathLine_ReturnsLinePathSegment()
     {
         var from = Vector2.zero;
