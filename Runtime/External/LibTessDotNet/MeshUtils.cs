@@ -35,6 +35,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
+namespace Unity.VectorGraphics.External
+{
+
 #if DOUBLE
 using Real = System.Double;
 namespace LibTessDotNet.Double
@@ -43,7 +46,7 @@ using Real = System.Single;
 namespace LibTessDotNet
 #endif
 {
-    public struct Vec3
+    internal struct Vec3
     {
         public readonly static Vec3 Zero = new Vec3();
 
@@ -464,3 +467,5 @@ namespace LibTessDotNet
         }
     }
 }
+
+} // namespace Unity.VectorGraphics.External

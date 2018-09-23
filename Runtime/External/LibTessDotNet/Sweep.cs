@@ -34,6 +34,9 @@
 using System;
 using System.Diagnostics;
 
+namespace Unity.VectorGraphics.External
+{
+
 #if DOUBLE
 using Real = System.Double;
 namespace LibTessDotNet.Double
@@ -42,7 +45,7 @@ using Real = System.Single;
 namespace LibTessDotNet
 #endif
 {
-    public partial class Tess
+    internal partial class Tess
     {
         internal class ActiveRegion
         {
@@ -1236,3 +1239,5 @@ namespace LibTessDotNet
         }
     }
 }
+
+} // namespace Unity.VectorGraphics.External

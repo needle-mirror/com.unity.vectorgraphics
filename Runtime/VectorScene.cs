@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -95,7 +96,6 @@ namespace Unity.VectorGraphics
     /// <summary>A bezier path segment.</summary>
     /// <remarks>
     /// Like BezierSegment but implies connectivity of segments, where segments[0].P3 is actually segments[1].P0
-    /// The last point of the path may only fill its P0, as P1 and P2 will be ignored.
     /// </remarks>
     public struct BezierPathSegment
     {
@@ -117,10 +117,15 @@ namespace Unity.VectorGraphics
         public BezierPathSegment[] Segments { get; set; }
 
         /// <summary>A boolean indicating if the contour should be closed.</summary>
+        /// <remarks>
+        ///  When set to true, closed path will connect the last path segment to the first path segment, by using the
+        ///  last path segment's P1 and P2 as control points.
+        /// </remarks>
         public bool Closed { get; set; }
     }
 
     /// <summary>The IDrawable interface is implemented by elements that displays something on screen.</summary>
+    [Obsolete("This interface is going away, use Shape instead")]
     public interface IDrawable { }
 
     /// <summary>The IFill interface is implemented by filling techniques (solid, texture or gradient).</summary>
@@ -246,6 +251,7 @@ namespace Unity.VectorGraphics
     }
 
     /// <summary>A path definition.</summary>
+    [Obsolete("Use the Shape class with no fill instead")]
     public class Path : IDrawable
     {
         /// <summary>The bezier contour defining the path.</summary>
@@ -256,6 +262,7 @@ namespace Unity.VectorGraphics
     }
 
     /// <summary>Filled shape representation.</summary>
+    [Obsolete("The filled properties are moved to the Shape class")]
     public abstract class Filled : IDrawable
     {
         /// <summary>The fill used on the shape.</summary>
@@ -270,6 +277,7 @@ namespace Unity.VectorGraphics
     }
 
     /// <summary>Defines a rectangle shape, which may be rounded.</summary>
+    [Obsolete("Use the Shape class and call VectorUtils.MakeRectangleShape() instead")]
     public class Rectangle : Filled
     {
         /// <summary>The position of the rectangle.</summary>
@@ -293,13 +301,25 @@ namespace Unity.VectorGraphics
     }
 
     /// <summary>A generic filled shape.</summary>
-    public class Shape : Filled
+    #pragma warning disable 618 // Silence use of deprecated IDrawable
+    public class Shape : IDrawable
+    #pragma warning restore 618
     {
         /// <summary>All the contours defining the shape.</summary>
         /// <remarks>
         /// Some of these coutours may be holes in the shape, depending on the fill mode used <see cref="FillMode"/>.
         /// </remarks>
         public BezierContour[] Contours { get; set; }
+
+        /// <summary>The fill used on the shape.</summary>
+        public IFill Fill { get; set; }
+
+        /// <summary>A transformation specific to the fill.</summary>
+        public Matrix2D FillTransform { get { return m_FillTransform; } set { m_FillTransform = value; } }
+        private Matrix2D m_FillTransform = Matrix2D.identity;
+
+        /// <summary>The path properties.</summary>
+        public PathProperties PathProps { get; set; }
 
         /// <summary>Whether the specified contours are convex or not</summary>
         /// <remarks>
@@ -316,7 +336,13 @@ namespace Unity.VectorGraphics
         public List<SceneNode> Children { get; set; }
 
         /// <summary>The list drawable elements.</summary>
+        #pragma warning disable 618 // Silence use of deprecated IDrawable
+        [Obsolete("Use the Shapes property instead")]
         public List<IDrawable> Drawables { get; set; }
+        #pragma warning restore 618
+
+        /// <summary>The list of shapes inside this node.</summary>
+        public List<Shape> Shapes { get; set; }
 
         /// <summary>The transform of the node.</summary>
         public Matrix2D Transform { get { return m_Transform; } set { m_Transform = value; } }

@@ -166,31 +166,24 @@ public class UtilsTests
     public void MakeEllipse_MakesRoundedRectWithEllipseShape()
     {
         var radiuses = new Vector2(10.0f, 20.0f);
-        var ellipse = VectorUtils.MakeEllipse(Vector2.zero, radiuses.x, radiuses.y);
+        var ellipse = new Shape();
+        VectorUtils.MakeEllipseShape(ellipse, Vector2.zero, radiuses.x, radiuses.y);
 
-        Assert.AreEqual(20.0f, ellipse.Size.x);
-        Assert.AreEqual(40.0f, ellipse.Size.y);
-
-        Assert.AreEqual(radiuses, ellipse.RadiusTL);
-        Assert.AreEqual(radiuses, ellipse.RadiusTR);
-        Assert.AreEqual(radiuses, ellipse.RadiusBR);
-        Assert.AreEqual(radiuses, ellipse.RadiusBL);
+        var segs = ellipse.Contours[0].Segments;
+        Assert.AreEqual(20.0f, (segs[2].P0-segs[0].P0).magnitude);
+        Assert.AreEqual(40.0f, (segs[3].P0-segs[1].P0).magnitude);
     }
 
     [Test]
     public void MakeCircle_MakesRoundedRectWithCircleShape()
     {
         var radius = 10.0f;
-        var circle = VectorUtils.MakeCircle(Vector2.zero, radius);
+        var circle = new Shape();
+        VectorUtils.MakeCircleShape(circle, Vector2.zero, radius);
 
-        Assert.AreEqual(20.0f, circle.Size.x);
-        Assert.AreEqual(20.0f, circle.Size.y);
-
-        var v = Vector2.one * 10.0f;
-        Assert.AreEqual(v, circle.RadiusTL);
-        Assert.AreEqual(v, circle.RadiusTR);
-        Assert.AreEqual(v, circle.RadiusBR);
-        Assert.AreEqual(v, circle.RadiusBL);
+        var segs = circle.Contours[0].Segments;
+        Assert.AreEqual(20.0f, (segs[2].P0-segs[0].P0).magnitude);
+        Assert.AreEqual(20.0f, (segs[3].P0-segs[1].P0).magnitude);
     }
 
     [Test]

@@ -14,13 +14,25 @@ namespace Unity.VectorGraphics
         /// <summary>A structure containing the SVG scene data.</summary>
         public struct SceneInfo
         {
-            internal SceneInfo(Scene scene, Dictionary<SceneNode, float> nodeOpacities) { this.Scene = scene; this.NodeOpacity = nodeOpacities; }
+            internal SceneInfo(Scene scene, Rect sceneViewport, Dictionary<SceneNode, float> nodeOpacities, Dictionary<string, SceneNode> nodeIDs)
+            {
+                Scene = scene;
+                SceneViewport = sceneViewport;
+                NodeOpacity = nodeOpacities;
+                NodeIDs = nodeIDs;
+            }
         
             /// <summary>The vector scene.</summary>
             public Scene Scene { get; }
-    
+
+            /// <summary>The position and size of the SVG document</summary>
+            public Rect SceneViewport { get; }
+
             /// <summary>A dictionary containing the opacity of the scene nodes.</summary>
             public Dictionary<SceneNode, float> NodeOpacity { get; }
+
+            /// <summary>A dictionary containing the scene node for a given ID</summary>
+            public Dictionary<string, SceneNode> NodeIDs { get; }
         }
 
         /// <summary>Kicks off an SVG file import.</summary>
@@ -29,8 +41,9 @@ namespace Unity.VectorGraphics
         /// <param name="pixelsPerUnit">How many SVG units fit in a Unity unit</param>
         /// <param name="windowWidth">The default with of the viewport, may be 0</param>
         /// <param name="windowHeight">The default height of the viewport, may be 0</param>
+        /// <param name="clipViewport">Whether the vector scene should be clipped by the SVG document's viewport</param>
         /// <returns>A SceneInfo object containing the scene data</returns>
-        public static SceneInfo ImportSVG(TextReader textReader, float dpi = 0.0f, float pixelsPerUnit = 1.0f, int windowWidth = 0, int windowHeight = 0)
+        public static SceneInfo ImportSVG(TextReader textReader, float dpi = 0.0f, float pixelsPerUnit = 1.0f, int windowWidth = 0, int windowHeight = 0, bool clipViewport = false)
         {
             var scene = new Scene();
             var settings = new XmlReaderSettings();
@@ -39,8 +52,11 @@ namespace Unity.VectorGraphics
             settings.IgnoreWhitespace = true;
 
             // Validation and resolving can reach through HTTP to fetch and validate against schemas/DTDs, which could take ages
-            //settings.DtdProcessing = DtdProcessing.Ignore;
+#if (NET_STANDARD_2_0 || NET_4_6)
+            settings.DtdProcessing = System.Xml.DtdProcessing.Ignore;
+#else
             settings.ProhibitDtd = false;
+#endif
             settings.ValidationFlags = System.Xml.Schema.XmlSchemaValidationFlags.None;
             settings.ValidationType = ValidationType.None;
             settings.XmlResolver = null;
@@ -49,17 +65,38 @@ namespace Unity.VectorGraphics
                 dpi = Screen.dpi;
 
             Dictionary<SceneNode, float> nodeOpacities;
+            Dictionary<string, SceneNode> nodeIDs;
+
+            SVGDocument doc;
             using (var reader = XmlReader.Create(textReader, settings))
             {
-                var doc = new SVGDocument(reader, dpi, scene, windowWidth, windowHeight);
+                doc = new SVGDocument(reader, dpi, scene, windowWidth, windowHeight);
                 doc.Import();
                 nodeOpacities = doc.NodeOpacities;
+                nodeIDs = doc.NodeIDs;
             }
 
             float scale = 1.0f / pixelsPerUnit;
             if ((scale != 1.0f) && (scene != null) && (scene.Root != null))
                 scene.Root.Transform = scene.Root.Transform * Matrix2D.Scale(new Vector2(scale, scale));
-            return new SceneInfo(scene, nodeOpacities);
+
+            if (clipViewport && (scene != null) && (scene.Root != null))
+            {
+                // Only add clipper if the scene isn't entirely contained in the viewport
+                var sceneBounds = VectorUtils.SceneNodeBounds(scene.Root);
+                if (!doc.sceneViewport.Contains(sceneBounds.min) || !doc.sceneViewport.Contains(sceneBounds.max))
+                {
+                    var rectClip = new Shape();
+                    VectorUtils.MakeRectangleShape(rectClip, doc.sceneViewport);
+
+                    scene.Root.Clipper = new SceneNode()
+                    {
+                        Shapes = new List<Shape>() { rectClip }
+                    };
+                }
+            }
+            
+            return new SceneInfo(scene, doc.sceneViewport, nodeOpacities, nodeIDs);
         }
     }
 
@@ -192,6 +229,7 @@ namespace Unity.VectorGraphics
         }
 
         public Dictionary<SceneNode, float> NodeOpacities { get { return nodeOpacity; } }
+        public Dictionary<string, SceneNode> NodeIDs { get { return nodeIDs; } }
 
         internal const float SVGLengthFactor = 1.41421356f; // Used when calculating relative lengths. See http://www.w3.org/TR/SVG/coords.html#Units
         static internal string StockBlackNonZeroFillName { get { return "unity_internal_black_nz"; } }
@@ -247,6 +285,7 @@ namespace Unity.VectorGraphics
             var node = docReader.VisitCurrent();
             var sceneNode = currentSceneNode.Peek();
 
+            ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
             var fill = SVGAttribParser.ParseFill(node, svgObjects, styleResolver);
@@ -258,12 +297,13 @@ namespace Unity.VectorGraphics
             float cy = AttribLengthVal(node, "cy", 0.0f, DimType.Height);
             float r = AttribLengthVal(node, "r", 0.0f, DimType.Length);
 
-            var circle = VectorUtils.MakeCircle(new Vector2(cx, cy), r);
+            var circle = new Shape();
+            VectorUtils.MakeCircleShape(circle, new Vector2(cx, cy), r);
             circle.PathProps = new PathProperties() { Stroke = stroke, Head = strokeEnding, Tail = strokeEnding, Corners = strokeCorner };
             circle.Fill = fill;
 
-            sceneNode.Drawables = new List<IDrawable>(1);
-            sceneNode.Drawables.Add(circle);
+            sceneNode.Shapes = new List<Shape>(1);
+            sceneNode.Shapes.Add(circle);
 
             ParseClipAndMask(node, sceneNode);
 
@@ -294,6 +334,7 @@ namespace Unity.VectorGraphics
             var node = docReader.VisitCurrent();
             var sceneNode = currentSceneNode.Peek();
 
+            ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
             var fill = SVGAttribParser.ParseFill(node, svgObjects, styleResolver);
@@ -306,12 +347,13 @@ namespace Unity.VectorGraphics
             float rx = AttribLengthVal(node, "rx", 0.0f, DimType.Length);
             float ry = AttribLengthVal(node, "ry", 0.0f, DimType.Length);
 
-            var ellipse = VectorUtils.MakeEllipse(new Vector2(cx, cy), rx, ry);
+            var ellipse = new Shape();
+            VectorUtils.MakeEllipseShape(ellipse, new Vector2(cx, cy), rx, ry);
             ellipse.PathProps = new PathProperties() { Stroke = stroke, Corners = strokeCorner, Head = strokeEnding, Tail = strokeEnding };
             ellipse.Fill = fill;
 
-            sceneNode.Drawables = new List<IDrawable>(1);
-            sceneNode.Drawables.Add(ellipse);
+            sceneNode.Shapes = new List<Shape>(1);
+            sceneNode.Shapes.Add(ellipse);
 
             ParseClipAndMask(node, sceneNode);
 
@@ -325,6 +367,7 @@ namespace Unity.VectorGraphics
             var node = docReader.VisitCurrent();
             var sceneNode = currentSceneNode.Peek();
 
+            ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
 
@@ -368,6 +411,7 @@ namespace Unity.VectorGraphics
                 {
                     // Fills and strokes don't seem to apply to image despite what the specs say
                     // All browsers and editing tools seem to ignore them, so we'll just do as well
+                    ParseID(node, sceneNode);
                     ParseOpacity(sceneNode);
                     sceneNode.Transform = SVGAttribParser.ParseTransform(node);
 
@@ -378,11 +422,11 @@ namespace Unity.VectorGraphics
                     ParseViewBoxAspectRatio(node, ref viewBoxInfo);
                     ApplyViewBox(sceneNode, viewBoxInfo, viewPort);
 
-                    var rect = new Rectangle() { Fill = textureFill, FillTransform = Matrix2D.identity };
-                    rect.Position = Vector2.zero;
-                    rect.Size = new Vector2(textureFill.Texture.width, textureFill.Texture.height);
-                    sceneNode.Drawables = new List<IDrawable>(1);
-                    sceneNode.Drawables.Add(rect);
+                    var rect = new Shape();
+                    VectorUtils.MakeRectangleShape(rect, new Rect(0, 0, textureFill.Texture.width, textureFill.Texture.height));
+                    rect.Fill = textureFill;
+                    sceneNode.Shapes = new List<Shape>(1);
+                    sceneNode.Shapes.Add(rect);
 
                     ParseClipAndMask(node, sceneNode);
                 }
@@ -398,6 +442,7 @@ namespace Unity.VectorGraphics
             var node = docReader.VisitCurrent();
             var sceneNode = currentSceneNode.Peek();
 
+            ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
             PathCorner strokeCorner;
@@ -409,11 +454,13 @@ namespace Unity.VectorGraphics
             float x2 = AttribLengthVal(node, "x2", 0.0f, DimType.Width);
             float y2 = AttribLengthVal(node, "y2", 0.0f, DimType.Height);
 
-            var path = new Path();
+            var path = new Shape();
             path.PathProps = new PathProperties() { Stroke = stroke, Head = strokeEnding, Tail = strokeEnding };
-            path.Contour = new BezierContour() { Segments = VectorUtils.BezierSegmentToPath(VectorUtils.MakeLine(new Vector2(x1, y1), new Vector2(x2, y2))) };
-            sceneNode.Drawables = new List<IDrawable>(1);
-            sceneNode.Drawables.Add(path);
+            path.Contours = new BezierContour[] {
+                new BezierContour() { Segments = VectorUtils.BezierSegmentToPath(VectorUtils.MakeLine(new Vector2(x1, y1), new Vector2(x2, y2))) }
+            };
+            sceneNode.Shapes = new List<Shape>(1);
+            sceneNode.Shapes.Add(path);
 
             ParseClipAndMask(node, sceneNode);
 
@@ -507,6 +554,7 @@ namespace Unity.VectorGraphics
             var node = docReader.VisitCurrent();
             var sceneNode = currentSceneNode.Peek();
 
+            ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
             var fill = SVGAttribParser.ParseFill(node, svgObjects, styleResolver);
@@ -521,17 +569,8 @@ namespace Unity.VectorGraphics
             {
                 //float pathLength = AttribFloatVal(node, "pathLength"); // This is useful for animation purposes mostly
 
-                if (fill == null)
-                {
-                    sceneNode.Drawables = new List<IDrawable>(contours.Count);
-                    foreach (var contour in contours)
-                        sceneNode.Drawables.Add(new Path() { Contour = contour, PathProps = pathProps });
-                }
-                else
-                {
-                    sceneNode.Drawables = new List<IDrawable>(1);
-                    sceneNode.Drawables.Add(new Shape() { Contours = contours.ToArray(), Fill = fill, PathProps = pathProps });
-                }
+                sceneNode.Shapes = new List<Shape>(1);
+                sceneNode.Shapes.Add(new Shape() { Contours = contours.ToArray(), Fill = fill, PathProps = pathProps });
 
                 AddToSVGDictionaryIfPossible(node, sceneNode);
             }
@@ -547,6 +586,7 @@ namespace Unity.VectorGraphics
             var node = docReader.VisitCurrent();
             var sceneNode = currentSceneNode.Peek();
 
+            ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
             var fill = SVGAttribParser.ParseFill(node, svgObjects, styleResolver);
@@ -577,11 +617,12 @@ namespace Unity.VectorGraphics
                     contour.Segments[i - 1] = new BezierPathSegment() { P0 = seg.P0, P1 = seg.P1, P2 = seg.P2 };
                     lastPoint = newPoint;
                 }
-                contour.Segments[contour.Segments.Length - 1] = new BezierPathSegment() { P0 = lastPoint };
+                var connect = VectorUtils.MakeLine(lastPoint, contour.Segments[0].P0);
+                contour.Segments[contour.Segments.Length - 1] = new BezierPathSegment() { P0 = connect.P0, P1 = connect.P1, P2 = connect.P2 };
 
                 var shape = new Shape() { Contours = new BezierContour[] { contour }, PathProps = pathProps, Fill = fill };
-                sceneNode.Drawables = new List<IDrawable>(1);
-                sceneNode.Drawables.Add(shape);
+                sceneNode.Shapes = new List<Shape>(1);
+                sceneNode.Shapes.Add(shape);
             }
 
             ParseClipAndMask(node, sceneNode);
@@ -596,6 +637,7 @@ namespace Unity.VectorGraphics
             var node = docReader.VisitCurrent();
             var sceneNode = currentSceneNode.Peek();
 
+            ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
             var fill = SVGAttribParser.ParseFill(node, svgObjects, styleResolver);
@@ -629,9 +671,10 @@ namespace Unity.VectorGraphics
                     shape.Contours[0].Segments[i - 1] = new BezierPathSegment() { P0 = seg.P0, P1 = seg.P1, P2 = seg.P2 };
                     lastPoint = newPoint;
                 }
-                shape.Contours[0].Segments[shape.Contours[0].Segments.Length - 1] = new BezierPathSegment() { P0 = lastPoint };
-                sceneNode.Drawables = new List<IDrawable>(1);
-                sceneNode.Drawables.Add(shape);
+                var connect = VectorUtils.MakeLine(lastPoint, shape.Contours[0].Segments[0].P0);
+                shape.Contours[0].Segments[shape.Contours[0].Segments.Length - 1] = new BezierPathSegment() { P0 = connect.P0, P1 = connect.P1, P2 = connect.P2 };
+                sceneNode.Shapes = new List<Shape>(1);
+                sceneNode.Shapes.Add(shape);
             }
 
             ParseClipAndMask(node, sceneNode);
@@ -890,6 +933,7 @@ namespace Unity.VectorGraphics
             var node = docReader.VisitCurrent();
             var sceneNode = currentSceneNode.Peek();
 
+            ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
             var fill = SVGAttribParser.ParseFill(node, svgObjects, styleResolver);
@@ -913,13 +957,13 @@ namespace Unity.VectorGraphics
             rx = Mathf.Min(rx, width * 0.5f);
             ry = Mathf.Min(ry, height * 0.5f);
 
-            var rect = new Rectangle() { Fill = fill };
+            var rad = new Vector2(rx, ry);
+            var rect = new Shape();
+            VectorUtils.MakeRectangleShape(rect, new Rect(x, y, width, height), rad, rad, rad, rad);
+            rect.Fill = fill;
             rect.PathProps = new PathProperties() { Stroke = stroke, Head = strokeEnding, Tail = strokeEnding, Corners = strokeCorner };
-            rect.Position = new Vector2(x, y);
-            rect.Size = new Vector2(width, height);
-            rect.RadiusTL = rect.RadiusTR = rect.RadiusBL = rect.RadiusBR = new Vector2(rx, ry);
-            sceneNode.Drawables = new List<IDrawable>(1);
-            sceneNode.Drawables.Add(rect);
+            sceneNode.Shapes = new List<Shape>(1);
+            sceneNode.Shapes.Add(rect);
 
             ParseClipAndMask(node, sceneNode);
 
@@ -983,12 +1027,17 @@ namespace Unity.VectorGraphics
 
             styleResolver.PushNode(node);
 
+            ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
 
-            var sceneViewport = ParseViewport(node, sceneNode, new Vector2(windowWidth, windowHeight));
-            ApplyViewBox(sceneNode, ParseViewBox(node, sceneNode, sceneViewport), sceneViewport);
+            sceneViewport = ParseViewport(node, sceneNode, new Vector2(windowWidth, windowHeight));
+            var viewBoxInfo = ParseViewBox(node, sceneNode, sceneViewport);
+            ApplyViewBox(sceneNode, viewBoxInfo, sceneViewport);
 
             currentContainerSize.Push(sceneViewport.size);
+            if (!viewBoxInfo.IsEmpty)
+                currentViewBoxSize.Push(viewBoxInfo.ViewBox.size);
+
             currentSceneNode.Push(sceneNode);
             nodeGlobalSceneState[sceneNode] = new NodeGlobalSceneState() { ContainerSize = currentContainerSize.Peek() };
 
@@ -996,10 +1045,13 @@ namespace Unity.VectorGraphics
                 SupportElems(node, allElems);
             ParseChildren(node, "svg");
 
-            currentContainerSize.Pop();
             if (currentSceneNode.Pop() != sceneNode)
                 throw SVGFormatException.StackError;
-            
+
+            if (!viewBoxInfo.IsEmpty)
+                currentViewBoxSize.Pop();
+            currentContainerSize.Pop();
+
             styleResolver.PopNode();
         }
 
@@ -1007,12 +1059,29 @@ namespace Unity.VectorGraphics
         {
             var node = docReader.VisitCurrent();
             var sceneNode = new SceneNode(); // A new scene node instead of one precreated for us
+
+            ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = Matrix2D.identity;
 
             Rect viewportRect = new Rect(Vector2.zero, currentContainerSize.Peek());
             var viewBoxInfo = ParseViewBox(node, sceneNode, viewportRect);
+            if (!viewBoxInfo.IsEmpty)
+                currentViewBoxSize.Push(viewBoxInfo.ViewBox.size);
+
             symbolViewBoxes[sceneNode] = viewBoxInfo;
+
+            // Resolve any node that was referencing this symbol
+            string id = node["id"];
+            if (!string.IsNullOrEmpty(id))
+            {
+                List<NodeReferenceData> refList;
+                if (postponedSymbolData.TryGetValue(id, out refList))
+                {
+                    foreach (var refData in refList)
+                        ResolveReferencedNode(sceneNode, refData);
+                }
+            }
 
             AddToSVGDictionaryIfPossible(node, sceneNode);
             if (ShouldDeclareSupportedChildren(node))
@@ -1023,6 +1092,9 @@ namespace Unity.VectorGraphics
             if (currentSceneNode.Pop() != sceneNode)
                 throw SVGFormatException.StackError;
 
+            if (!viewBoxInfo.IsEmpty)
+                currentViewBoxSize.Pop();
+
             ParseClipAndMask(node, sceneNode);
         }
 
@@ -1030,24 +1102,50 @@ namespace Unity.VectorGraphics
         {
             var node = docReader.VisitCurrent();
             var sceneNode = currentSceneNode.Peek();
+
             ParseOpacity(sceneNode);
 
-            var referencedNode = SVGAttribParser.ParseRelativeRef(node["xlink:href"], svgObjects) as SceneNode;
-            if (referencedNode == null)
-                throw node.GetException("Referencing non-existent element (" + node["xlink:href"] + ")");
+            var sceneViewport = ParseViewport(node, sceneNode, Vector2.zero);
+
+            var fill = SVGAttribParser.ParseFill(node, svgObjects, styleResolver, SVGResolveLimit.Single, false);
+            PathCorner strokeCorner;
+            PathEnding strokeEnding;
+            var stroke = ParseStrokeAttributeSet(node, out strokeCorner, out strokeEnding, SVGResolveLimit.Single);
+
+            // We check for a non-null string since fill="none" will return a null fill, but we still want to override in this case
+            bool hasFill = styleResolver.Evaluate("fill") != null;
+            bool hasStroke = styleResolver.Evaluate("stroke") != null;
+
+            var refData = new NodeReferenceData() {
+                node = sceneNode,
+                viewport = sceneViewport,
+                overrideFill = hasFill,
+                fill = fill,
+                overrideStroke = hasStroke,
+                stroke = stroke,
+                id = node["id"]
+            };
+
+            var iri = node["xlink:href"];
+            var referencedNode = SVGAttribParser.ParseRelativeRef(iri, svgObjects) as SceneNode;
+            if (referencedNode == null && !string.IsNullOrEmpty(iri) && iri.StartsWith("#"))
+            {
+                // The referenced node may be defined later in the file, save it for later
+                iri = iri.Substring(1);
+                List<NodeReferenceData> refList;
+                if (!postponedSymbolData.TryGetValue(iri, out refList))
+                {
+                    refList = new List<NodeReferenceData>();
+                    postponedSymbolData[iri] = refList;
+                }
+                refList.Add(refData);
+            }
 
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
-            var sceneViewport = ParseViewport(node, sceneNode, Vector2.zero);
             sceneNode.Transform = sceneNode.Transform * Matrix2D.Translate(sceneViewport.position);
 
-            // Note we don't use the viewport size because the <use> element doesn't establish a viewport for its referenced elements
-            ViewBoxInfo viewBoxInfo;
-            if (symbolViewBoxes.TryGetValue(referencedNode, out viewBoxInfo))
-                ApplyViewBox(sceneNode, viewBoxInfo, sceneViewport); // When using a symbol we need to apply the symbol's view box
-
-            if (sceneNode.Children == null)
-                sceneNode.Children = new List<SceneNode>();
-            sceneNode.Children.Add(referencedNode);
+            if (referencedNode != null)
+                ResolveReferencedNode(referencedNode, refData);
 
             ParseClipAndMask(node, sceneNode);
 
@@ -1066,6 +1164,203 @@ namespace Unity.VectorGraphics
 
             if (ShouldDeclareSupportedChildren(node))
                 SupportElems(node);  // No children supported
+        }
+        #endregion
+
+        #region Symbol Reference Processing
+        private void ResolveReferencedNode(SceneNode referencedNode, NodeReferenceData refData)
+        {
+            // Note we don't use the viewport size because the <use> element doesn't establish a viewport for its referenced elements
+            ViewBoxInfo viewBoxInfo;
+            if (symbolViewBoxes.TryGetValue(referencedNode, out viewBoxInfo))
+                ApplyViewBox(refData.node, viewBoxInfo, refData.viewport); // When using a symbol we need to apply the symbol's view box
+
+            if (refData.node.Children == null)
+                refData.node.Children = new List<SceneNode>();
+
+            SceneNode node = referencedNode;
+            if (referencedNode.Shapes != null && (refData.overrideFill || refData.overrideStroke))
+            {
+                // Clone the node to override the fill/stroke properties
+                node = CloneSceneNode(referencedNode);
+                foreach (var shape in node.Shapes)
+                {
+                    if (refData.overrideFill)
+                    {
+                        shape.Fill = refData.fill;
+                    }
+
+                    if (refData.overrideStroke)
+                    {
+                        var props = shape.PathProps;
+                        props.Stroke = refData.stroke;
+                        shape.PathProps = props;
+                    }
+                }
+            }
+
+            // We process the node ID here to refer to the proper scene node
+            if (!string.IsNullOrEmpty(refData.id))
+                nodeIDs[refData.id] = node;
+
+            refData.node.Children.Add(node);
+        }
+        #endregion
+
+        #region Scene Node Cloning
+        // This is a poor man's cloning system, until we have proper serialization in VectorScene.
+        private SceneNode CloneSceneNode(SceneNode node)
+        {
+            if (node == null)
+                return null;
+
+            List<SceneNode> children = null;
+            if (node.Children != null)
+            {
+                children = new List<SceneNode>(node.Children.Count);
+                foreach (var c in node.Children)
+                    children.Add(CloneSceneNode(c));
+            }
+
+            List<Shape> shapes = null;
+            if (node.Shapes != null)
+            {
+                shapes = new List<Shape>(node.Shapes.Count);
+                foreach (var d in node.Shapes)
+                    shapes.Add(CloneShape(d));
+            }
+
+            return new SceneNode() {
+                Children = children,
+                Shapes = shapes,
+                Transform = node.Transform,
+                Clipper = CloneSceneNode(node.Clipper)
+            };
+        }
+
+        private Shape CloneShape(Shape shape)
+        {
+            if (shape == null)
+                return null;
+
+            BezierContour[] contours = null;
+            if (shape.Contours != null)
+            {
+                contours = new BezierContour[shape.Contours.Length];
+                for (int i = 0; i < contours.Length; ++i)
+                    contours[i] = CloneContour(shape.Contours[i]);
+            }
+            return new Shape() {
+                Fill = CloneFill(shape.Fill),
+                FillTransform = shape.FillTransform,
+                PathProps = ClonePathProps(shape.PathProps),
+                Contours = contours,
+                IsConvex = shape.IsConvex
+            };
+        }
+
+        private BezierContour CloneContour(BezierContour c)
+        {
+            BezierPathSegment[] segs = null;
+            if (c.Segments != null)
+            {
+                segs = new BezierPathSegment[c.Segments.Length];
+                for (int i = 0; i < segs.Length; ++i)
+                {
+                    var s = c.Segments[i];
+                    segs[i] = new BezierPathSegment() { P0 = s.P0, P1 = s.P1, P2 = s.P2 };
+                }
+            }
+            return new BezierContour() { Segments = segs, Closed = c.Closed };
+        }
+
+        private IFill CloneFill(IFill fill)
+        {
+            if (fill == null)
+                return null;
+
+            IFill f = null;
+            if (fill is SolidFill)
+            {
+                var solid = fill as SolidFill;
+                f = new SolidFill() {
+                    Color = solid.Color,
+                    Opacity = solid.Opacity,
+                    Mode = solid.Mode
+                };
+            }
+            else if (fill is GradientFill)
+            {
+                var grad = fill as GradientFill;
+                GradientStop[] stops = null;
+                if (grad.Stops != null)
+                {
+                    stops = new GradientStop[grad.Stops.Length];
+                    for (int i = 0; i < stops.Length; ++i)
+                    {
+                        var stop = grad.Stops[i];
+                        stops[i] = new GradientStop() { Color = stop.Color, StopPercentage = stop.StopPercentage };
+                    }
+                }
+                f = new GradientFill() {
+                    Type = grad.Type,
+                    Stops = stops,
+                    Mode = grad.Mode,
+                    Opacity = grad.Opacity,
+                    Addressing = grad.Addressing,
+                    RadialFocus = grad.RadialFocus
+                };
+            }
+            else if (fill is TextureFill)
+            {
+                var tex = fill as TextureFill;
+                f = new TextureFill() {
+                    Texture = tex.Texture,
+                    Mode = tex.Mode,
+                    Opacity = tex.Opacity,
+                    Addressing = tex.Addressing
+                };
+            }
+            else if (fill is PatternFill)
+            {
+                var pat = fill as PatternFill;
+                f = new PatternFill() {
+                    Mode = pat.Mode,
+                    Opacity = pat.Opacity,
+                    Pattern = CloneSceneNode(pat.Pattern),
+                    Rect = pat.Rect
+                };
+            }
+            return f;
+        }
+
+        private PathProperties ClonePathProps(PathProperties props)
+        {
+            Stroke stroke = null;
+            if (props.Stroke != null)
+            {
+                float[] pattern = null;
+                if (props.Stroke.Pattern != null)
+                {
+                    pattern = new float[props.Stroke.Pattern.Length];
+                    for (int i = 0; i < pattern.Length; ++i)
+                        pattern[i] = props.Stroke.Pattern[i];
+                }
+                stroke = new Stroke() {
+                    Color = props.Stroke.Color,
+                    HalfThickness = props.Stroke.HalfThickness,
+                    Pattern = pattern,
+                    PatternOffset = props.Stroke.PatternOffset,
+                    TippedCornerLimit = props.Stroke.TippedCornerLimit
+                };
+            }
+
+            return new PathProperties() {
+                Stroke = stroke,
+                Head = props.Head,
+                Tail = props.Tail,
+                Corners = props.Corners
+            };
         }
         #endregion
 
@@ -1123,7 +1418,11 @@ namespace Unity.VectorGraphics
                 if (number < 0)
                     throw node.GetException("Number in " + attribName + " cannot be negative");
                 number /= 100.0f;
-                var vpSize = currentContainerSize.Peek();
+
+                // If there's an active viewbox, this should be used as the reference size for relative coordinates.
+                // See https://www.w3.org/TR/SVG/coords.html#Units
+                Vector2 vpSize = currentViewBoxSize.Count > 0 ? currentViewBoxSize.Peek() : currentContainerSize.Peek();
+
                 switch (dimType)
                 {
                     case DimType.Width: return number * vpSize.x;
@@ -1178,10 +1477,10 @@ namespace Unity.VectorGraphics
 
         enum ViewBoxAlign { Min, Mid, Max }
         enum ViewBoxAspectRatio { DontPreserve, FitLargestDim, FitSmallestDim }
-        struct ViewBoxInfo { public Rect ViewBox; public ViewBoxAspectRatio AspectRatio; public ViewBoxAlign AlignX, AlignY; }
+        struct ViewBoxInfo { public Rect ViewBox; public ViewBoxAspectRatio AspectRatio; public ViewBoxAlign AlignX, AlignY; public bool IsEmpty; }
         ViewBoxInfo ParseViewBox(XmlReaderIterator.Node node, SceneNode sceneNode, Rect sceneViewport)
         {
-            var viewBoxInfo = new ViewBoxInfo();
+            var viewBoxInfo = new ViewBoxInfo() { IsEmpty = true };
             string viewBoxString = node["viewBox"];
             viewBoxString = viewBoxString != null ? viewBoxString.Trim() : null;
             if (string.IsNullOrEmpty(viewBoxString))
@@ -1200,6 +1499,7 @@ namespace Unity.VectorGraphics
             viewBoxInfo.ViewBox = new Rect(viewBoxMin, viewBoxSize);
             ParseViewBoxAspectRatio(node, ref viewBoxInfo);
 
+            viewBoxInfo.IsEmpty = false;
             return viewBoxInfo;
         }
 
@@ -1286,29 +1586,29 @@ namespace Unity.VectorGraphics
             sceneNode.Transform = sceneNode.Transform * Matrix2D.Scale(scale) * Matrix2D.Translate(offset);
         }
 
-        Stroke ParseStrokeAttributeSet(XmlReaderIterator.Node node, out PathCorner strokeCorner, out PathEnding strokeEnding)
+        Stroke ParseStrokeAttributeSet(XmlReaderIterator.Node node, out PathCorner strokeCorner, out PathEnding strokeEnding, SVGResolveLimit limit = SVGResolveLimit.Hierarchy)
         {
-            var stroke = SVGAttribParser.ParseStrokeAndOpacity(node, svgObjects, styleResolver);
+            var stroke = SVGAttribParser.ParseStrokeAndOpacity(node, svgObjects, styleResolver, limit);
             strokeCorner = PathCorner.Tipped;
             strokeEnding = PathEnding.Chop;
             if (stroke != null)
             {
-                string strokeWidth = styleResolver.Evaluate("stroke-width", SVGResolveLimit.Hierarchy);
+                string strokeWidth = styleResolver.Evaluate("stroke-width", limit);
                 stroke.HalfThickness = AttribLengthVal(strokeWidth, node, "stroke-width", 1.0f, DimType.Length) * 0.5f;
-                switch (styleResolver.Evaluate("stroke-linecap", SVGResolveLimit.Hierarchy))
+                switch (styleResolver.Evaluate("stroke-linecap", limit))
                 {
                     case "butt": strokeEnding = PathEnding.Chop; break;
                     case "square": strokeEnding = PathEnding.Square; break;
                     case "round": strokeEnding = PathEnding.Round; break;
                 }
-                switch (styleResolver.Evaluate("stroke-linejoin", SVGResolveLimit.Hierarchy))
+                switch (styleResolver.Evaluate("stroke-linejoin", limit))
                 {
                     case "miter": strokeCorner = PathCorner.Tipped; break;
                     case "round": strokeCorner = PathCorner.Round; break;
                     case "bevel": strokeCorner = PathCorner.Beveled; break;
                 }
 
-                string pattern = styleResolver.Evaluate("stroke-dasharray", SVGResolveLimit.Hierarchy);
+                string pattern = styleResolver.Evaluate("stroke-dasharray", limit);
                 if (pattern != null && pattern != "none")
                 {
                     string[] entries = pattern.Split(whiteSpaceNumberChars, StringSplitOptions.RemoveEmptyEntries);
@@ -1335,6 +1635,13 @@ namespace Unity.VectorGraphics
                     throw node.GetException("'stroke-miterlimit' should be greater or equal to 1");
             } // If stroke is specified
             return stroke;
+        }
+
+        void ParseID(XmlReaderIterator.Node node, SceneNode sceneNode)
+        {
+            string id = node["id"];
+            if (!string.IsNullOrEmpty(id))
+                nodeIDs[id] = sceneNode;
         }
 
         float ParseOpacity(SceneNode sceneNode)
@@ -1467,29 +1774,25 @@ namespace Unity.VectorGraphics
             // Adjust fills on all objects
             foreach (var nodeInfo in VectorUtils.WorldTransformedSceneNodes(root, nodeOpacity))
             {
-                if (nodeInfo.Node.Drawables == null)
+                if (nodeInfo.Node.Shapes == null)
                     continue;
-                foreach (var drawable in nodeInfo.Node.Drawables)
+                foreach (var shape in nodeInfo.Node.Shapes)
                 {
-                    Filled filled = drawable as Filled;
-                    if (filled != null)
+                    if (shape.Fill is GradientFill)
                     {
-                        if (filled.Fill is GradientFill)
+                        AdjustGradientFill(nodeInfo.Node, nodeInfo.WorldTransform, shape);
+                    }
+                    else if (shape.Fill is PatternFill)
+                    {
+                        var fillNode = AdjustPatternFill(nodeInfo.Node, nodeInfo.WorldTransform, shape);
+                        if (fillNode != null)
                         {
-                            AdjustGradientFill(nodeInfo.Node, nodeInfo.WorldTransform, filled);
-                        }
-                        else if (filled.Fill is PatternFill)
-                        {
-                            var fillNode = AdjustPatternFill(nodeInfo.Node, nodeInfo.WorldTransform, filled);
-                            if (fillNode != null)
+                            hierarchyUpdates.Add(new HierarchyUpdate()
                             {
-                                hierarchyUpdates.Add(new HierarchyUpdate()
-                                {
-                                    Parent = nodeInfo.Parent,
-                                    NewNode = fillNode,
-                                    ReplaceNode = nodeInfo.Node
-                                });
-                            }
+                                Parent = nodeInfo.Parent,
+                                NewNode = fillNode,
+                                ReplaceNode = nodeInfo.Node
+                            });
                         }
                     }
                 }
@@ -1503,31 +1806,20 @@ namespace Unity.VectorGraphics
             }
         }
 
-        void AdjustGradientFill(SceneNode node, Matrix2D worldTransform, Filled filledObj)
+        void AdjustGradientFill(SceneNode node, Matrix2D worldTransform, Shape shape)
         {
-            GradientFill fill = filledObj.Fill as GradientFill;
-            if (fill == null)
+            GradientFill fill = shape.Fill as GradientFill;
+            if (fill == null || shape.Contours == null)
                 return;
 
-            Vector2 min = Vector2.zero, max = Vector2.zero;
-            if (filledObj is Rectangle)
+            var min = new Vector2(float.MaxValue, float.MaxValue);
+            var max = new Vector2(-float.MaxValue, -float.MaxValue);
+            foreach (var contour in shape.Contours)
             {
-                var r = (Rectangle)filledObj;
-                min = r.Position;
-                max = r.Position + r.Size;
+                var bbox = VectorUtils.Bounds(contour.Segments);
+                min = Vector2.Min(min, bbox.min);
+                max = Vector2.Max(max, bbox.max);
             }
-            else if (filledObj is Shape)
-            {
-                min = new Vector2(float.MaxValue, float.MaxValue);
-                max = new Vector2(-float.MaxValue, -float.MaxValue);
-                foreach (var contour in ((Shape)filledObj).Contours)
-                {
-                    var bbox = VectorUtils.Bounds(contour.Segments);
-                    min = Vector2.Min(min, bbox.min);
-                    max = Vector2.Max(max, bbox.max);
-                }
-            }
-            else System.Diagnostics.Debug.Assert(false);
 
             Rect bounds = new Rect(min, max - min);
 
@@ -1606,12 +1898,12 @@ namespace Unity.VectorGraphics
 
             var uvToWorld = extInfo.WorldRelative ? Matrix2D.Translate(bounds.min) * Matrix2D.Scale(bounds.size) : Matrix2D.identity;
             var boundsInv = new Vector2(1.0f / bounds.width, 1.0f / bounds.height);
-            filledObj.FillTransform = Matrix2D.Scale(boundsInv) * gradTransform * extInfo.FillTransform.Inverse() * uvToWorld;
+            shape.FillTransform = Matrix2D.Scale(boundsInv) * gradTransform * extInfo.FillTransform.Inverse() * uvToWorld;
         }
 
-        SceneNode AdjustPatternFill(SceneNode node, Matrix2D worldTransform, Filled filledObj)
+        SceneNode AdjustPatternFill(SceneNode node, Matrix2D worldTransform, Shape shape)
         {
-            PatternFill patternFill = filledObj.Fill as PatternFill;
+            PatternFill patternFill = shape.Fill as PatternFill;
             if (patternFill == null ||
                 Mathf.Abs(patternFill.Rect.width) < VectorUtils.Epsilon ||
                 Mathf.Abs(patternFill.Rect.height) < VectorUtils.Epsilon)
@@ -1662,9 +1954,12 @@ namespace Unity.VectorGraphics
             };
 
             // SVG patterns are clipped in their respective "boxes"
+            var clippingBox = new Shape();
+            VectorUtils.MakeRectangleShape(clippingBox,  new Rect(0,0,patternRect.width, patternRect.height));
+
             var box = new SceneNode() {
                 Transform = Matrix2D.identity,
-                Drawables = new List<IDrawable> { new Rectangle() { Size = patternRect.size } }
+                Shapes = new List<Shape> { clippingBox }
             };
 
             // Compute the bounds of the shape to be filled, taking into account the pattern transform
@@ -1751,16 +2046,21 @@ namespace Unity.VectorGraphics
         Dictionary<SceneNode, ViewBoxInfo> symbolViewBoxes = new Dictionary<SceneNode, ViewBoxInfo>();
         Dictionary<SceneNode, NodeGlobalSceneState> nodeGlobalSceneState = new Dictionary<SceneNode, NodeGlobalSceneState>();
         Dictionary<SceneNode, float> nodeOpacity = new Dictionary<SceneNode, float>();
+        Dictionary<string, SceneNode> nodeIDs = new Dictionary<string, SceneNode>();
         Dictionary<SceneNode, ClipData> clipData = new Dictionary<SceneNode, ClipData>();
         Dictionary<SceneNode, PatternData> patternData = new Dictionary<SceneNode, PatternData>();
         Dictionary<SceneNode, MaskData> maskData = new Dictionary<SceneNode, MaskData>();
+        Dictionary<string, List<NodeReferenceData>> postponedSymbolData = new Dictionary<string, List<NodeReferenceData>>();
         List<NodeWithParent> invisibleNodes = new List<NodeWithParent>();
         Stack<Vector2> currentContainerSize = new Stack<Vector2>();
+        Stack<Vector2> currentViewBoxSize = new Stack<Vector2>();
         Stack<SceneNode> currentSceneNode = new Stack<SceneNode>();
         GradientFill currentGradientFill;
         ElemHandler[] allElems;
         HashSet<ElemHandler> elemsToAddToHierarchy;
         SVGStyleResolver styleResolver = new SVGStyleResolver();
+
+        internal Rect sceneViewport;
 
         struct NodeGlobalSceneState
         {
@@ -1806,6 +2106,17 @@ namespace Unity.VectorGraphics
         {
             public SceneNode node;
             public SceneNode parent;
+        }
+
+        struct NodeReferenceData
+        {
+            public SceneNode node;
+            public Rect viewport;
+            public bool overrideFill;
+            public IFill fill;
+            public bool overrideStroke;
+            public Stroke stroke;
+            public string id;
         }
     }
 
@@ -1998,7 +2309,8 @@ namespace Unity.VectorGraphics
         {
             string path = node["d"];
             if (string.IsNullOrEmpty(path))
-                throw node.GetException("'path' element missing 'd' attribute");
+                return null;
+
             try
             {
                 return (new SVGAttribParser(path, AttribPath.Path)).contours;
@@ -2031,7 +2343,7 @@ namespace Unity.VectorGraphics
             }
         }
 
-        public static IFill ParseFill(XmlReaderIterator.Node node, SVGDictionary dict, SVGStyleResolver styleResolver)
+        public static IFill ParseFill(XmlReaderIterator.Node node, SVGDictionary dict, SVGStyleResolver styleResolver, SVGResolveLimit limit = SVGResolveLimit.Hierarchy, bool returnDefaultIfNull = true)
         {
             string opacityAttrib = styleResolver.Evaluate("fill-opacity", SVGResolveLimit.Hierarchy);
             float opacity = (opacityAttrib != null) ? ParseFloat(opacityAttrib) : 1.0f;
@@ -2048,7 +2360,10 @@ namespace Unity.VectorGraphics
 
             try
             {
-                var fill = styleResolver.Evaluate("fill", SVGResolveLimit.Hierarchy);
+                var fill = styleResolver.Evaluate("fill", limit);
+                if (fill == null && !returnDefaultIfNull)
+                    return null;
+
                 return (new SVGAttribParser(fill, "fill", opacity, mode, dict)).fill;
             }
             catch (Exception e)
@@ -2057,13 +2372,13 @@ namespace Unity.VectorGraphics
             }
         }
 
-        public static Stroke ParseStrokeAndOpacity(XmlReaderIterator.Node node, SVGDictionary dict, SVGStyleResolver styleResolver)
+        public static Stroke ParseStrokeAndOpacity(XmlReaderIterator.Node node, SVGDictionary dict, SVGStyleResolver styleResolver, SVGResolveLimit limit = SVGResolveLimit.Hierarchy)
         {
-            string strokeAttrib = styleResolver.Evaluate("stroke", SVGResolveLimit.Hierarchy);
+            string strokeAttrib = styleResolver.Evaluate("stroke", limit);
             if (string.IsNullOrEmpty(strokeAttrib))
                 return null; // If stroke is not specified, no other stroke properties matter
 
-            string opacityAttrib = styleResolver.Evaluate("stroke-opacity", SVGResolveLimit.Hierarchy);
+            string opacityAttrib = styleResolver.Evaluate("stroke-opacity", limit);
             float opacity = (opacityAttrib != null) ? ParseFloat(opacityAttrib) : 1.0f;
 
             IFill strokeFill = null;
@@ -2406,7 +2721,8 @@ namespace Unity.VectorGraphics
                 int index = 0;
                 foreach (var bs in currentContour)
                     contour.Segments[index++] = new BezierPathSegment() { P0 = bs.P0, P1 = bs.P1, P2 = bs.P2  };
-                contour.Segments[index] = new BezierPathSegment() { P0 = currentContour.Last.Value.P3 };
+                var connect = VectorUtils.MakeLine(currentContour.Last.Value.P3, contour.Segments[0].P0);
+                contour.Segments[index] = new BezierPathSegment() { P0 = connect.P0, P1 = connect.P1, P2 = connect.P2 };
                 contours.Add(contour);
             }
             currentContour.Clear(); // Restart a new path

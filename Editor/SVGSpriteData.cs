@@ -18,6 +18,9 @@ namespace Unity.VectorGraphics.Editor
         public SpriteRect SpriteRect = new SpriteRect();
         public List<OutlineData> PhysicsOutlines = new List<OutlineData>();
 
+        private SpriteAlignment m_PrevAlignment;
+        private Vector2 m_PrevPivot;
+
         public void Load(SerializedObject so)
         {
             var importer = so.targetObject as SVGImporter;
@@ -37,15 +40,37 @@ namespace Unity.VectorGraphics.Editor
             var spriteRectSP = baseSP.FindPropertyRelative("SpriteRect");
             SpriteRect.border = Vector4.zero;
             SpriteRect.pivot = sprite.pivot / textureSize;
+
             var guidSP = spriteRectSP.FindPropertyRelative("m_SpriteID");
             SpriteRect.spriteID = new GUID(guidSP.stringValue);
+
+            SpriteRect.alignment = SpriteAlignment.Center;
+            if (Enum.IsDefined(typeof(SpriteAlignment), (int)importer.Alignment))
+                SpriteRect.alignment = (SpriteAlignment)importer.Alignment;
+            else if (importer.Alignment == VectorUtils.Alignment.SVGOrigin)
+                SpriteRect.alignment = SpriteAlignment.Custom;
+            m_PrevAlignment = SpriteRect.alignment;
+            m_PrevPivot = SpriteRect.pivot;
+        }
+
+        public void Apply(SerializedObject so)
+        {
+            if (SpriteRect.alignment != m_PrevAlignment || SpriteRect.pivot != m_PrevPivot)
+            {
+                // Only apply the alignment if it changed, otherwise we may override the special "SVG Origin" value
+                var alignSP = so.FindProperty("m_Alignment");
+                alignSP.intValue = (int)SpriteRect.alignment;
+
+                var pivotSP = so.FindProperty("m_CustomPivot");
+                pivotSP.vector2Value = SpriteRect.pivot;
+            }
         }
     }
 
     [Serializable]
     internal struct OutlineData
     {
-        public Vector2[] vertices;
+        public Vector2[] Vertices;
     }
 
     internal class SVGDataProviderBase
@@ -67,16 +92,27 @@ namespace Unity.VectorGraphics.Editor
             return m_Importer;
         }
 
-        public Sprite GetImportedSprite()
+        public Sprite GetSprite()
         {
-            return SVGImporter.GetImportedSprite(GetImporter().assetPath);
+            var sprite = GetImporter().GetImportingSprite();
+            if (sprite == null)
+                sprite = SVGImporter.GetImportedSprite(GetImporter().assetPath);
+            return sprite;
+        }
+
+        public Texture2D GetTexture2D()
+        {
+            var tex = GetImporter().GetImportingTexture2D();
+            if (tex == null)
+                tex = SVGImporter.GetImportedTexture2D(GetImporter().assetPath);
+            return tex;
         }
 
         public Vector2 GetTextureSize()
         {
             int targetWidth;
             int targetHeight;
-            GetImporter().TextureSizeForSpriteEditor(GetImportedSprite(), out targetWidth, out targetHeight);
+            GetImporter().TextureSizeForSpriteEditor(GetSprite(), out targetWidth, out targetHeight);
             return new Vector2(targetWidth, targetHeight);
         }
     }
@@ -88,27 +124,40 @@ namespace Unity.VectorGraphics.Editor
         public SVGTextureDataProvider(SVGImporter importer) : base(importer)
         { }
 
-        public Texture2D texture {
+        public Texture2D texture
+        {
             get
             {
-                // The "previewTexture" property should be used, but since it was only introduced in 2018.2,
+                if (GetImporter().SvgType == SVGType.TexturedSprite)
+                {
+                    return GetTexture2D();
+                }
+
+                // For vector sprites, the "previewTexture" property should be used, but since it was only introduced in 2018.2,
                 // we fallback to the "texture" property, which works fine for textureless SVG sprites.
                 // SVG sprite with textures/gradients will be displayed wrong in 2018.1.
-                if (typeof(ITextureDataProvider).GetProperty("previewTexture") == null)
-                {
-                    return previewTexture;
-                }
+
+#if UNITY_2018_2_OR_NEWER
                 return null;
+#else
+                return previewTexture;
+#endif
             }
         }
 
         private Texture2D m_PreviewTexture;
-        public Texture2D previewTexture {
+        public Texture2D previewTexture
+        {
             get
             {
+                if (GetImporter().SvgType == SVGType.TexturedSprite)
+                {
+                    return texture;
+                }
+
                 if (m_PreviewTexture == null)
                 {
-                    var sprite = GetImportedSprite();
+                    var sprite = GetSprite();
                     var size = ((Vector2)sprite.bounds.size) * sprite.pixelsPerUnit;
 
                     const float kMinTextureSize = 2048.0f;
@@ -126,7 +175,19 @@ namespace Unity.VectorGraphics.Editor
 
         public void GetTextureActualWidthAndHeight(out int width, out int height)
         {
-            GetImporter().TextureSizeForSpriteEditor(GetImportedSprite(), out width, out height);
+            width = 0;
+            height = 0;
+
+            if (GetImporter().SvgType == SVGType.VectorSprite)
+            {
+                GetImporter().TextureSizeForSpriteEditor(GetSprite(), out width, out height);
+            }
+            else if (GetImporter().SvgType == SVGType.TexturedSprite)
+            {
+                var tex = GetTexture2D();
+                width = tex.width;
+                height = tex.height;
+            }
         }
 
         private Texture2D m_ReadableTexture;
@@ -134,9 +195,16 @@ namespace Unity.VectorGraphics.Editor
         {
             if (m_ReadableTexture == null)
             {
-                var sprite = GetImportedSprite();
-                var size = ((Vector2)sprite.bounds.size) * sprite.pixelsPerUnit;
-                m_ReadableTexture = VectorUtils.RenderSpriteToTexture2D(sprite, (int)size.x, (int)size.y, SVGImporter.GetSVGSpriteMaterial(sprite), 4);                
+                if (GetImporter().SvgType == SVGType.VectorSprite)
+                {
+                    var sprite = GetSprite();
+                    var size = ((Vector2)sprite.bounds.size) * sprite.pixelsPerUnit;
+                    m_ReadableTexture = VectorUtils.RenderSpriteToTexture2D(sprite, (int)size.x, (int)size.y, SVGImporter.GetSVGSpriteMaterial(sprite), 4);
+                }
+                else
+                {
+                    return GetTexture2D();
+                }
             }
             return m_ReadableTexture;
         }
@@ -149,12 +217,47 @@ namespace Unity.VectorGraphics.Editor
 
         List<Vector2[]> ISpritePhysicsOutlineDataProvider.GetOutlines(GUID guid)
         {
-            return GetSVGSpriteData().PhysicsOutlines.Select(x => x.vertices.ToArray()).ToList();
+            if (GetSVGSpriteData().PhysicsOutlines.Count == 0)
+            {
+                // If no physics outline was set in the Sprite Editor, show the sprite's physics shape directly (if any)
+                var sprite = GetSprite();
+                if (sprite == null)
+                    return null;
+
+                var importer = GetImporter();
+                int width;
+                int height;
+                importer.TextureSizeForSpriteEditor(sprite, out width, out height);
+                var size = new Vector2(width, height);
+                var offset = new Vector2(-width/2.0f, -height/2.0f);
+
+                var storedShapes = new List<Vector2[]>(sprite.GetPhysicsShapeCount());
+                var shape = new List<Vector2>();
+                for (int i = 0; i < sprite.GetPhysicsShapeCount(); ++i)
+                {
+                    shape.Clear();
+                    sprite.GetPhysicsShape(i, shape);
+                    var bounds = VectorUtils.Bounds(shape);
+                    for (int j = 0; j < shape.Count; ++j)
+                    {
+                        var p = shape[j];
+                        p -= bounds.min;
+                        p /= bounds.size;
+                        p *= size;
+                        p += offset;
+                        shape[j] = p;
+                    }
+                    storedShapes.Add(shape.ToArray());
+                }
+
+                return storedShapes;
+            }
+            return GetSVGSpriteData().PhysicsOutlines.Select(x => x.Vertices.ToArray()).ToList();
         }
 
         void ISpritePhysicsOutlineDataProvider.SetOutlines(GUID guid, List<Vector2[]> data)
         {
-            GetSVGSpriteData().PhysicsOutlines = data.Select(x => new OutlineData() { vertices = x }).ToList();
+            GetSVGSpriteData().PhysicsOutlines = data.Select(x => new OutlineData() { Vertices = x }).ToList();
         }
 
         float ISpritePhysicsOutlineDataProvider.GetTessellationDetail(GUID guid)

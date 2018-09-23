@@ -130,6 +130,8 @@ var path = new Path() {
 };
 ```
 
+When defining a `BezierContour` with `Closed = true`, the contour's last path segment will be connected to the first path segment, and the last path segment's `P1` and `P2` values will be used as control points.
+
 ### Shapes
 
 Just like paths, shapes are defined by a `BezierContour`, but they also provide a filling method:
@@ -338,6 +340,7 @@ public static void RenderSprite(
 
 |Date  | Reason |
 |:-----|:-------|
+|Sept 24, 2018|Matches Vector Graphics 1.0.0-preview.19|
 |May 2, 2018|Matches Vector Graphics 1.0.0-preview.7|
 |Mar 20, 2018|Updated public APIs documentation. Matches Vector Graphics version 1.0.3-experimental.|
 |Feb 01, 2018|Document created. Matches Vector Graphics version 1.0.2-experimental.|

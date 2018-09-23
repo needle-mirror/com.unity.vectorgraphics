@@ -4,6 +4,7 @@
     {
         _MainTex ("Texture", 2D) = "white" {}
         _Color ("Tint", Color) = (1,1,1,1)
+        [HideInInspector] _RendererColor ("RendererColor", Color) = (1,1,1,1)
     }
     SubShader
     {
@@ -26,8 +27,20 @@
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile_instancing
 
             #include "UnityCG.cginc"
+
+            #ifdef UNITY_INSTANCING_ENABLED
+            UNITY_INSTANCING_BUFFER_START(PerDrawSprite)
+                UNITY_DEFINE_INSTANCED_PROP(fixed4, unity_SpriteRendererColorArray)
+            UNITY_INSTANCING_BUFFER_END(PerDrawSprite)
+            #define _RendererColor  UNITY_ACCESS_INSTANCED_PROP(PerDrawSprite, unity_SpriteRendererColorArray)
+            #endif
+
+            #ifndef UNITY_INSTANCING_ENABLED
+            fixed4 _RendererColor;
+            #endif
 
             struct appdata
             {
@@ -59,6 +72,7 @@
                 #else
                 o.color = fixed4(GammaToLinearSpace(v.color.rgb), v.color.a);
                 #endif
+                o.color *= _RendererColor;
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 o.settingIndex = v.settingIndex;
                 return o;

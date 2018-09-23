@@ -59,7 +59,7 @@ public class CornerTests : MonoBehaviour
             path.PathProps = pathProps;
 
             var geoms = new List<VectorUtils.Geometry>();
-            TessellatePath(path.Contour, path.PathProps, geoms, options);
+            TessellatePath(path.Contours[0], path.PathProps, geoms, options);
             sprites.Add(SpriteFromGeometry(geoms));
         }
 
@@ -74,17 +74,19 @@ public class CornerTests : MonoBehaviour
         }
     }
 
-    private static Path LinesWithAngle(float angle, float width)
+    private static Shape LinesWithAngle(float angle, float width)
     {
         var p = Vector2.zero;
         var q = new Vector2(20.0f, 0.0f) + p;
         var r = new Vector2(Mathf.Cos(angle) * 20.0f, Mathf.Sin(angle) * 20.0f) + q;
-        var path = new Path() {
-            Contour = new BezierContour() {
-                Segments = new BezierPathSegment[] {
-                    new BezierPathSegment() { P0 = p, P1 = p + (q - p) / 3.0f, P2 = p + (q - p) / 3.0f * 2.0f },
-                    new BezierPathSegment() { P0 = q, P1 = q + (r - q) / 3.0f, P2 = q + (r - q) / 3.0f * 2.0f },
-                    new BezierPathSegment() { P0 = r }
+        var path = new Shape() {
+            Contours = new BezierContour[] {
+                new BezierContour() {
+                    Segments = new BezierPathSegment[] {
+                        new BezierPathSegment() { P0 = p, P1 = p + (q - p) / 3.0f, P2 = p + (q - p) / 3.0f * 2.0f },
+                        new BezierPathSegment() { P0 = q, P1 = q + (r - q) / 3.0f, P2 = q + (r - q) / 3.0f * 2.0f },
+                        new BezierPathSegment() { P0 = r }
+                    }
                 }
             },
             PathProps = new PathProperties() {
@@ -110,7 +112,8 @@ public class CornerTests : MonoBehaviour
             colors.AddRange(Enumerable.Repeat(geom.Color, geom.Vertices.Length));
         }
 
-        var bbox = VectorUtils.RealignVerticesInBounds(vertices, true);
+        var bbox = VectorUtils.Bounds(vertices);
+        VectorUtils.RealignVerticesInBounds(vertices, bbox, true);
         var rect = new Rect(0, 0, bbox.width, bbox.height);
 
         // The Sprite.Create(Rect, Vector2, float, Texture2D) method is internal. Using reflection

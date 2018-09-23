@@ -43,17 +43,17 @@ namespace Unity.VectorGraphics
             /// <summary>Bottom-right alignment.</summary>
             BottomRight = 8,
 
-            /// <summary>SVG origin alignment.</summary>
-            /// <remarks>
-            /// This will use the origin of the SVG document as the origin of the sprite.
-            /// </remarks>
-            SVGOrigin = 9,
-
             /// <summary>Custom alignment.</summary>
             /// <remarks>
             /// Uses a custom alignment that will be used when building the sprite using the <see cref="BuildSprite"/> method.
             /// </remarks>
-            Custom = 10
+            Custom = 9,
+
+            /// <summary>SVG origin alignment.</summary>
+            /// <remarks>
+            /// This will use the origin of the SVG document as the origin of the sprite.
+            /// </remarks>
+            SVGOrigin = 10
         }
 
         /// <summary>Builds a sprite asset from a scene tessellation.</summary>
@@ -66,6 +66,20 @@ namespace Unity.VectorGraphics
         /// <returns>A new Sprite containing the provided geometry. The Sprite may have a texture if the geometry has any texture and/or gradients</returns>
         public static Sprite BuildSprite(List<Geometry> geoms, float svgPixelsPerUnit, Alignment alignment, Vector2 customPivot, UInt16 gradientResolution, bool flipYAxis = false)
         {
+            return BuildSprite(geoms, Rect.zero, svgPixelsPerUnit, alignment, customPivot, gradientResolution, flipYAxis);
+        }
+
+        /// <summary>Builds a sprite asset from a scene tessellation.</summary>
+        /// <param name="geoms">The list of tessellated Geometry instances</param>
+        /// <param name="rect">The position and size of the sprite geometry</param>
+        /// <param name="svgPixelsPerUnit">How many SVG "pixels" map into a Unity unit</param>
+        /// <param name="alignment">The position of the sprite origin</param>
+        /// <param name="customPivot">If alignment is <see cref="Alignment.Custom"/>, customPivot is used to compute the sprite origin</param>
+        /// <param name="gradientResolution">The maximum size of the texture holding gradient data</param>
+        /// <param name="flipYAxis">True to have the positive Y axis to go downward.</param>
+        /// <returns>A new Sprite containing the provided geometry. The Sprite may have a texture if the geometry has any texture and/or gradients</returns>
+        public static Sprite BuildSprite(List<Geometry> geoms, Rect rect, float svgPixelsPerUnit, Alignment alignment, Vector2 customPivot, UInt16 gradientResolution, bool flipYAxis = false)
+        {
             // Generate atlas
             var texAtlas = GenerateAtlasAndFillUVs(geoms, gradientResolution);
 
@@ -74,12 +88,25 @@ namespace Unity.VectorGraphics
             List<Color> colors;
             List<Vector2> uvs;
             List<Vector2> settingIndices;
-            FillVertexChannels(geoms, 1.0f, texAtlas != null, out vertices, out indices, out colors, out uvs, out settingIndices);
+            FillVertexChannels(geoms, 1.0f, texAtlas != null, out vertices, out indices, out colors, out uvs, out settingIndices, flipYAxis);
 
             Texture2D texture = texAtlas != null ? texAtlas.Texture : null;
-            var bbox = VectorUtils.RealignVerticesInBounds(vertices, flipYAxis);
-            var rect = new Rect(0, 0, bbox.width, bbox.height);
-            var pivot = GetPivot(alignment, customPivot, bbox);
+
+            if (rect == Rect.zero)
+            {
+                rect = VectorUtils.Bounds(vertices);
+                VectorUtils.RealignVerticesInBounds(vertices, rect, flipYAxis);
+            }
+            else if (flipYAxis)
+            {
+                VectorUtils.FlipVerticesInBounds(vertices, rect);
+
+                // The provided rect should normally contain the whole geometry, but since VectorUtils.SceneNodeBounds doesn't
+                // take the strokes into account, some triangles may appear outside the rect. We clamp the vertices as a workaround for now.
+                VectorUtils.ClampVerticesInBounds(vertices, rect);
+            }
+
+            var pivot = GetPivot(alignment, customPivot, rect, flipYAxis);
 
             // The Sprite.Create(Rect, Vector2, float, Texture2D) method is internal. Using reflection
             // until it becomes public.
@@ -120,7 +147,10 @@ namespace Unity.VectorGraphics
             List<Color> colors;
             List<Vector2> uvs;
             List<Vector2> settingIndices;
-            FillVertexChannels(geoms, svgPixelsPerUnit, hasUVs, out vertices, out indices, out colors, out uvs, out  settingIndices);
+            FillVertexChannels(geoms, svgPixelsPerUnit, hasUVs, out vertices, out indices, out colors, out uvs, out settingIndices, flipYAxis);
+
+            if (flipYAxis)
+                FlipYAxis(vertices);
 
             mesh.Clear();
             mesh.SetVertices(vertices.Select(v => (Vector3)v).ToList());
@@ -135,7 +165,19 @@ namespace Unity.VectorGraphics
                 mesh.SetUVs(2, settingIndices);
         }
 
-        private static void FillVertexChannels(List<Geometry> geoms, float pixelsPerUnit, bool hasUVs, out List<Vector2> vertices, out List<UInt16> indices, out List<Color> colors, out List<Vector2> uvs, out List<Vector2> settingIndices)
+        private static void FlipYAxis(IList<Vector2> vertices)
+        {
+            var bbox = Bounds(vertices);
+            var h = bbox.height;
+            for (int i = 0; i < vertices.Count; ++i)
+            {
+                var v = vertices[i];
+                v.y = h - v.y;
+                vertices[i] = v;
+            }
+        }
+
+        private static void FillVertexChannels(List<Geometry> geoms, float pixelsPerUnit, bool hasUVs, out List<Vector2> vertices, out List<UInt16> indices, out List<Color> colors, out List<Vector2> uvs, out List<Vector2> settingIndices, bool flipYAxis)
         {
             int totalVerts = 0, totalIndices = 0;
             foreach (var geom in geoms)
@@ -155,16 +197,53 @@ namespace Unity.VectorGraphics
 
             foreach (var geom in geoms)
             {
+                int indexStart = indices.Count;
+                int indexEnd = indexStart + geom.Indices.Length;
+
                 int vertexCount = vertices.Count;
                 indices.AddRange(geom.Indices.Select(x => (UInt16)(x + vertexCount)));
                 vertices.AddRange(geom.Vertices.Select(x => (geom.WorldTransform * x) / pixelsPerUnit));
                 colors.AddRange(Enumerable.Repeat(geom.Color, geom.Vertices.Length));
+
+                FlipRangeIfNecessary(vertices, indices, indexStart, indexEnd, flipYAxis);
+
                 System.Diagnostics.Debug.Assert(uvs == null || geom.UVs != null);
                 if (uvs != null)
                 {
                     uvs.AddRange(geom.UVs);
                     for (int i = 0; i < geom.UVs.Length; i++)
                         settingIndices.Add(new Vector2(geom.SettingIndex, 0));
+                }
+            }
+        }
+
+        private static void FlipRangeIfNecessary(List<Vector2> vertices, List<UInt16> indices, int indexStart, int indexEnd, bool flipYAxis)
+        {
+            // For the range, find the first valid triangle and check its winding order. If that triangle needs flipping, then flip the whole range.
+            bool shouldFlip = false;
+            for (int i = indexStart; i < (indexEnd - 2); i += 3)
+            {
+                var v0 = (Vector3)vertices[indices[i]];
+                var v1 = (Vector3)vertices[indices[i + 1]];
+                var v2 = (Vector3)vertices[indices[i + 2]];
+                var s = (v1 - v0).normalized;
+                var t = (v2 - v0).normalized;
+                float dot = Vector3.Dot(s, t);
+                if (s == Vector3.zero || t == Vector3.zero || dot > 0.99f || dot < -0.99f)
+                    continue;
+                var n = Vector3.Cross(s, t);
+                if (n.sqrMagnitude < 0.001f)
+                    continue;
+                shouldFlip = flipYAxis ? n.z < 0.0f : n.z > 0.0f;
+                break;
+            }
+            if (shouldFlip)
+            {
+                for (int i = indexStart; i < (indexEnd - 2); i += 3)
+                {
+                    var tmp = indices[i + 1];
+                    indices[i + 1] = indices[i + 2];
+                    indices[i + 2] = tmp;
                 }
             }
         }
@@ -251,12 +330,11 @@ namespace Unity.VectorGraphics
             tex.Release();
 
             RenderTexture.DestroyImmediate(tex);
-            Material.DestroyImmediate(mat);
 
             return copy;
         }
 
-        private static Vector2 GetPivot(Alignment alignment, Vector2 customPivot, Rect bbox)
+        private static Vector2 GetPivot(Alignment alignment, Vector2 customPivot, Rect bbox, bool flipYAxis)
         {
             switch (alignment)
             {
@@ -269,7 +347,13 @@ namespace Unity.VectorGraphics
                 case Alignment.BottomLeft: return new Vector2(0.0f, 0.0f);
                 case Alignment.BottomCenter: return new Vector2(0.5f, 0.0f);
                 case Alignment.BottomRight: return new Vector2(1.0f, 0.0f);
-                case Alignment.SVGOrigin: return -bbox.position / bbox.size;
+                case Alignment.SVGOrigin: 
+                {
+                     var p = -bbox.position / bbox.size;
+                     if (flipYAxis)
+                        p.y = 1.0f - p.y;
+                    return p;
+                }
                 case Alignment.Custom: return customPivot;
             }
             return Vector2.zero;

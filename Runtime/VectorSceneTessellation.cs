@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
-using LibTessDotNet;
+using Unity.VectorGraphics.External.LibTessDotNet;
 
 namespace Unity.VectorGraphics
 {
@@ -55,14 +55,12 @@ namespace Unity.VectorGraphics
             VectorClip.ResetClip();
             var geoms = TessellateNodeHierarchyRecursive(scene.Root, tessellationOptions, scene.Root.Transform, 1.0f, nodeOpacities);
 
-            foreach (var geom in geoms)
-                FlipShapeIfNecessary(geom.Vertices, geom.Indices);
-
             UnityEngine.Profiling.Profiler.EndSample();
 
             return geoms;
         }
 
+        #pragma warning disable 612, 618 // Silence use of deprecated IDrawable
         private static List<Geometry> TessellateNodeHierarchyRecursive(SceneNode node, TessellationOptions tessellationOptions, Matrix2D worldTransform, float worldOpacity, Dictionary<SceneNode, float> nodeOpacities)
         {
             if (node.Clipper != null)
@@ -72,6 +70,7 @@ namespace Unity.VectorGraphics
 
             if (node.Drawables != null)
             {
+                // We process the drawables even though they are obsolete, until we remove the IDrawable interface entirely
                 foreach (var drawable in node.Drawables)
                 {
                     var vectorShape = drawable as Shape;
@@ -96,15 +95,24 @@ namespace Unity.VectorGraphics
                         continue;
                     }
                 }
+            }
 
-                foreach (var g in geoms)
+            if (node.Shapes != null)
+            {
+                foreach (var shape in node.Shapes)
                 {
-                    g.Color.a *= worldOpacity;
-                    g.WorldTransform = worldTransform;
-                    g.UnclippedBounds = Bounds(g.Vertices);
-
-                    VectorClip.ClipGeometry(g);
+                    bool isConvex = shape.IsConvex && shape.Contours.Length == 1;
+                    TessellateShape(shape, geoms, tessellationOptions, isConvex);
                 }
+            }
+
+            foreach (var g in geoms)
+            {
+                g.Color.a *= worldOpacity;
+                g.WorldTransform = worldTransform;
+                g.UnclippedBounds = Bounds(g.Vertices);
+
+                VectorClip.ClipGeometry(g);
             }
 
             if (node.Children != null)
@@ -136,45 +144,61 @@ namespace Unity.VectorGraphics
             foreach (var nodeInfo in WorldTransformedSceneNodes(root, null))
             {
                 var node = nodeInfo.Node;
-                if (node.Drawables == null || node.Drawables.Count == 0)
-                    continue;
 
-                foreach (var drawable in node.Drawables)
+                // We process the drawables even though they are obsolete, until we remove the IDrawable interface entirely
+                if (node.Drawables != null)
                 {
-                    var vectorShape = drawable as Shape;
-                    if (vectorShape != null)
+                    foreach (var drawable in node.Drawables)
                     {
-                        foreach (var c in vectorShape.Contours)
+                        var vectorShape = drawable as Shape;
+                        if (vectorShape != null)
                         {
-                            var shape = VectorUtils.TraceShape(c, vectorShape.PathProps.Stroke, tessellationOptions);
+                            foreach (var c in vectorShape.Contours)
+                            {
+                                var shape = VectorUtils.TraceShape(c, vectorShape.PathProps.Stroke, tessellationOptions);
+                                if (shape.Length > 0)
+                                    shapes.Add(shape.Select(v => nodeInfo.WorldTransform * v).ToArray());
+                            }
+                            continue;
+                        }
+
+                        var vectorPath = drawable as Path;
+                        if (vectorPath != null)
+                        {
+                            var shape = VectorUtils.TraceShape(vectorPath.Contour, vectorPath.PathProps.Stroke, tessellationOptions);
                             if (shape.Length > 0)
                                 shapes.Add(shape.Select(v => nodeInfo.WorldTransform * v).ToArray());
+                            continue;
                         }
-                        continue;
-                    }
 
-                    var vectorPath = drawable as Path;
-                    if (vectorPath != null)
-                    {
-                        var shape = VectorUtils.TraceShape(vectorPath.Contour, vectorPath.PathProps.Stroke, tessellationOptions);
-                        if (shape.Length > 0)
-                            shapes.Add(shape.Select(v => nodeInfo.WorldTransform * v).ToArray());
-                        continue;
+                        var vectorRect = drawable as Rectangle;
+                        if (vectorRect != null)
+                        {
+                            var shape = VectorUtils.TraceRectangle(vectorRect, vectorRect.PathProps.Stroke, tessellationOptions);
+                            if (shape.Length > 0)
+                                shapes.Add(shape.Select(v => nodeInfo.WorldTransform * v).ToArray());
+                            continue;
+                        }
                     }
+                }
 
-                    var vectorRect = drawable as Rectangle;
-                    if (vectorRect != null)
+                if (node.Shapes != null)
+                {
+                    foreach (var shape in node.Shapes)
                     {
-                        var shape = VectorUtils.TraceRectangle(vectorRect, vectorRect.PathProps.Stroke, tessellationOptions);
-                        if (shape.Length > 0)
-                            shapes.Add(shape.Select(v => nodeInfo.WorldTransform * v).ToArray());
-                        continue;
+                        foreach (var c in shape.Contours)
+                        {
+                            var tracedShape = VectorUtils.TraceShape(c, shape.PathProps.Stroke, tessellationOptions);
+                            if (tracedShape.Length > 0)
+                                shapes.Add(tracedShape.Select(v => nodeInfo.WorldTransform * v).ToArray());
+                        }
                     }
                 }
             }
 
             return shapes;
         }
+        #pragma warning restore 612, 618
 
         private static void TessellateShape(Shape vectorShape, List<Geometry> geoms, TessellationOptions tessellationOptions, bool isConvex)
         {
@@ -229,14 +253,7 @@ namespace Unity.VectorGraphics
             var mean = Vector2.zero;
             foreach (var seg in contour.Segments)
                 mean += seg.P0;
-
-            int length = contour.Segments.Length;
-            if (contour.Closed)
-            {
-                mean -= contour.Segments.Last().P0;
-                --length;
-            }
-            mean /= length;
+            mean /= contour.Segments.Length;
 
             // Trace the shape and build triangle fan
             var tracedShape = VectorUtils.TraceShape(contour, stroke, tessellationOptions);
@@ -436,7 +453,9 @@ namespace Unity.VectorGraphics
 
             int atlasWidth = (int)atlasSize.x;
             int atlasHeight = (int)atlasSize.y;
-            var atlasColors = new Color32[atlasWidth * atlasHeight]; // Comes out all black transparent
+            var atlasColors = new Color32[atlasWidth * atlasHeight];
+            for (int k = 0; k < atlasWidth * atlasHeight; ++k)
+                atlasColors[k] = Color.black;
             Vector2 atlasInvSize = new Vector2(1.0f / (float)atlasWidth, 1.0f / (float)atlasHeight);
             Vector2 whiteTexelsScreenPos = pack[pack.Count - 1].Position;
             Vector2 whiteTexelsPos = (whiteTexelsScreenPos + Vector2.one) * atlasInvSize;
@@ -511,6 +530,7 @@ namespace Unity.VectorGraphics
             atlasTex.wrapModeV = TextureWrapMode.Clamp;
             atlasTex.wrapModeW = TextureWrapMode.Clamp;
             atlasTex.SetPixels32(atlasColors);
+            atlasTex.Apply();
 
             UnityEngine.Profiling.Profiler.EndSample();
 
@@ -543,36 +563,6 @@ namespace Unity.VectorGraphics
             }
 
             UnityEngine.Profiling.Profiler.EndSample();
-        }
-
-        private static void FlipShapeIfNecessary(Vector2[] vertices, UInt16[] indices)
-        {
-            // For each range, find the first valid triangle and check its winding order. If that triangle needs flipping, then flip the whole range.
-            bool shouldFlip = false;
-            for (int i = 0; i < (indices.Length - 2); i += 3)
-            {
-                var v0 = (Vector3)vertices[indices[i]];
-                var v1 = (Vector3)vertices[indices[i + 1]];
-                var v2 = (Vector3)vertices[indices[i + 2]];
-                var s = (v1 - v0).normalized;
-                var t = (v2 - v0).normalized;
-                if (s == Vector3.zero || t == Vector3.zero || Mathf.Approximately(Vector3.Dot(s, t), 1.0f))
-                    continue;
-                var n = Vector3.Cross(s, t);
-                if (Mathf.Approximately(n.magnitude, 0.0f))
-                    continue;
-                shouldFlip = n.z > 0.0f;
-                break;
-            }
-            if (shouldFlip)
-            {
-                for (int i = 0; i < (indices.Length - 2); i += 3)
-                {
-                    var tmp = indices[i + 1];
-                    indices[i + 1] = indices[i + 2];
-                    indices[i + 2] = tmp;
-                }
-            }
         }
     }
 }

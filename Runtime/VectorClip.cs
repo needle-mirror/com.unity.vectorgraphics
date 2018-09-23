@@ -2,8 +2,8 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
-using LibTessDotNet;
-using ClipperLib;
+using Unity.VectorGraphics.External.LibTessDotNet;
+using Unity.VectorGraphics.External.ClipperLib;
 
 namespace Unity.VectorGraphics
 {

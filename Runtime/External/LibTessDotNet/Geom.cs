@@ -34,6 +34,9 @@
 using System;
 using System.Diagnostics;
 
+namespace Unity.VectorGraphics.External
+{
+
 #if DOUBLE
 using Real = System.Double;
 namespace LibTessDotNet.Double
@@ -299,3 +302,5 @@ namespace LibTessDotNet
         }
     }
 }
+
+} // namespace Unity.VectorGraphics.External

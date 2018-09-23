@@ -31,6 +31,9 @@
 ** LibTessDotNet: Remi Gillig, https://github.com/speps/LibTessDotNet
 */
 
+namespace Unity.VectorGraphics.External
+{
+
 #if DOUBLE
 namespace LibTessDotNet.Double
 #else
@@ -104,3 +107,5 @@ namespace LibTessDotNet
         }
     }
 }
+
+} // namespace Unity.VectorGraphics.External

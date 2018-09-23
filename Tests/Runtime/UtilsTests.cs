@@ -9,25 +9,25 @@ public class UtilsTests
 {
     private static List<VectorUtils.Geometry> BuildGeoms()
     {
+        var rect = new Shape();
+        VectorUtils.MakeRectangleShape(rect, new Rect(0,0, 100, 50));
+        rect.Fill = new SolidFill() { Color = Color.red };
+
         var node = new SceneNode() {
-            Drawables = new List<IDrawable> {
-                new Rectangle() {
-                    Size = new Vector2(100, 50),
-                    Fill = new SolidFill() { Color = Color.red }
-                }
-            }
+            Shapes = new List<Shape> { rect }
         };
         var scene = new Scene() { Root = node };
 
         var options = new VectorUtils.TessellationOptions()
         {
-            StepDistance = 10.0f,
+            StepDistance = float.MaxValue,
             MaxCordDeviation = float.MaxValue,
             MaxTanAngleDeviation = Mathf.PI/2.0f,
             SamplingStepSize = 0.01f
         };
 
-        return VectorUtils.TessellateScene(scene, options);
+        var geoms = VectorUtils.TessellateScene(scene, options);
+        return geoms;
     }
 
     [Test]
@@ -37,7 +37,7 @@ public class UtilsTests
         Assert.NotNull(sprite);
         Assert.AreEqual((Vector2)sprite.bounds.min, Vector2.zero);
         Assert.AreEqual((Vector2)sprite.bounds.max, new Vector2(1.0f, 0.5f));
-        Assert.AreEqual(4, sprite.vertices.Length);
+        Assert.AreEqual(5, sprite.vertices.Length);
         Sprite.Destroy(sprite);
     }
 
@@ -48,7 +48,7 @@ public class UtilsTests
         VectorUtils.FillMesh(mesh, BuildGeoms(), 100.0f);
         Assert.AreEqual((Vector2)mesh.bounds.min, Vector2.zero);
         Assert.AreEqual((Vector2)mesh.bounds.max, new Vector2(1.0f, 0.5f));
-        Assert.AreEqual(4, mesh.vertices.Length);
+        Assert.AreEqual(5, mesh.vertices.Length);
         Mesh.Destroy(mesh);
     }
 

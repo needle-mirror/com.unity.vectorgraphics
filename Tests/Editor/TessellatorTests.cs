@@ -28,7 +28,7 @@ public class TessellatorTests
 
             Vector2[] vertices;
             UInt16[] indices;
-            VectorUtils.TessellatePath(path.Contour, path.PathProps, MakeTessOptions(10.0f), out vertices, out indices);
+            VectorUtils.TessellatePath(path.Contours[0], path.PathProps, MakeTessOptions(10.0f), out vertices, out indices);
 
             float targetWidth = (float)width;
 
@@ -57,7 +57,7 @@ public class TessellatorTests
 
         Vector2[] vertices;
         UInt16[] indices;
-        VectorUtils.TessellatePath(path.Contour, path.PathProps, MakeTessOptions(100.0f), out vertices, out indices);
+        VectorUtils.TessellatePath(path.Contours[0], path.PathProps, MakeTessOptions(100.0f), out vertices, out indices);
 
         // There should be 2 triangles to generate a quad
         Assert.AreEqual(2, indices.Length / 3);
@@ -73,7 +73,7 @@ public class TessellatorTests
 
         Vector2[] vertices;
         UInt16[] indices;
-        VectorUtils.TessellatePath(path.Contour, path.PathProps, MakeTessOptions(100.0f), out vertices, out indices);
+        VectorUtils.TessellatePath(path.Contours[0], path.PathProps, MakeTessOptions(100.0f), out vertices, out indices);
 
         // Tipped joins generates 2 triangles, plus 4 for the straight line quads
         Assert.AreEqual(6, indices.Length / 3);
@@ -89,7 +89,7 @@ public class TessellatorTests
 
         Vector2[] vertices;
         UInt16[] indices;
-        VectorUtils.TessellatePath(path.Contour, path.PathProps, MakeTessOptions(100.0f), out vertices, out indices);
+        VectorUtils.TessellatePath(path.Contours[0], path.PathProps, MakeTessOptions(100.0f), out vertices, out indices);
 
         // At coarse step distance, round joins generates 4 triangles, plus 4 for the straight line quads
         Assert.AreEqual(8, indices.Length / 3);
@@ -105,7 +105,7 @@ public class TessellatorTests
 
         Vector2[] vertices;
         UInt16[] indices;
-        VectorUtils.TessellatePath(path.Contour, path.PathProps, MakeTessOptions(100.0f), out vertices, out indices);
+        VectorUtils.TessellatePath(path.Contours[0], path.PathProps, MakeTessOptions(100.0f), out vertices, out indices);
 
         // Beveled joins generates 1 triangle, plus 4 for the straight line quads
         Assert.AreEqual(5, indices.Length / 3);
@@ -119,7 +119,7 @@ public class TessellatorTests
 
         Vector2[] vertices;
         UInt16[] indices;
-        VectorUtils.TessellatePath(path.Contour, path.PathProps, MakeTessOptions(100.0f), out vertices, out indices);
+        VectorUtils.TessellatePath(path.Contours[0], path.PathProps, MakeTessOptions(100.0f), out vertices, out indices);
 
         // There should be 2 quads for 2 dashes
         Assert.AreEqual(4, indices.Length / 3);
@@ -157,7 +157,6 @@ public class TessellatorTests
                         new BezierPathSegment() { P0 = new Vector2(1,0),  P1 = new Vector2(1, 0.25f), P2 = new Vector2(1, 0.75f) },
                         new BezierPathSegment() { P0 = new Vector2(1,1),  P1 = new Vector2(0.75f, 1), P2 = new Vector2(0.25f, 1) },
                         new BezierPathSegment() { P0 = new Vector2(0,1),  P1 = new Vector2(0, 0.75f), P2 = new Vector2(0, 0.25f) },
-                        new BezierPathSegment() { P0 = new Vector2(0,0) }
                     },
                     Closed = true
                 }
@@ -166,7 +165,7 @@ public class TessellatorTests
             IsConvex = true
         };
 
-        var scene = new Scene() { Root = new SceneNode() { Drawables = new List<IDrawable> { shape } } };
+        var scene = new Scene() { Root = new SceneNode() { Shapes = new List<Shape> { shape } } };
         var geoms = VectorUtils.TessellateScene(scene, MakeTessOptions(1000));
         Assert.AreEqual(1, geoms.Count);
 
@@ -180,23 +179,23 @@ public class TessellatorTests
         Assert.AreEqual(new Vector2(0.0f, 1.0f), geom.Vertices[4]);
 
         Assert.AreEqual(0, geom.Indices[0]);
-        Assert.AreEqual(2, geom.Indices[1]);
-        Assert.AreEqual(1, geom.Indices[2]);
+        Assert.AreEqual(1, geom.Indices[1]);
+        Assert.AreEqual(2, geom.Indices[2]);
         Assert.AreEqual(0, geom.Indices[3]);
-        Assert.AreEqual(3, geom.Indices[4]);
-        Assert.AreEqual(2, geom.Indices[5]);
+        Assert.AreEqual(2, geom.Indices[4]);
+        Assert.AreEqual(3, geom.Indices[5]);
         Assert.AreEqual(0, geom.Indices[6]);
-        Assert.AreEqual(4, geom.Indices[7]);
-        Assert.AreEqual(3, geom.Indices[8]);
+        Assert.AreEqual(3, geom.Indices[7]);
+        Assert.AreEqual(4, geom.Indices[8]);
         Assert.AreEqual(0, geom.Indices[9]);
-        Assert.AreEqual(1, geom.Indices[10]);
-        Assert.AreEqual(4, geom.Indices[11]);
+        Assert.AreEqual(4, geom.Indices[10]);
+        Assert.AreEqual(1, geom.Indices[11]);
     }
 
-    private Path MakeLine(Vector2 from, Vector2 to, float width)
+    private Shape MakeLine(Vector2 from, Vector2 to, float width)
     {
-        return new Path() {
-            Contour = new BezierContour() { Segments = VectorUtils.MakePathLine(from, to) },
+        return new Shape() {
+            Contours = new BezierContour[] { new BezierContour() { Segments = VectorUtils.MakePathLine(from, to) } },
             PathProps = new PathProperties() {
                 Stroke = new Stroke() { HalfThickness = width / 2.0f },
                 Head = PathEnding.Chop,
@@ -206,14 +205,16 @@ public class TessellatorTests
         };
     }
 
-    private Path MakeCorner(Vector2 p0, Vector2 p1, Vector2 p2, float width)
+    private Shape MakeCorner(Vector2 p0, Vector2 p1, Vector2 p2, float width)
     {
-        return new Path() {
-            Contour = new BezierContour() {
-                Segments = new BezierPathSegment[] {
-                    new BezierPathSegment() { P0 = p0, P1 = p0 + (p1 - p0) / 3.0f, P2 = p0 + (p1 - p0) / 3.0f * 2.0f },
-                    new BezierPathSegment() { P0 = p1, P1 = p1 + (p2 - p1) / 3.0f, P2 = p1 + (p2 - p1) / 3.0f * 2.0f },
-                    new BezierPathSegment() { P0 = p2 }
+        return new Shape() {
+            Contours = new BezierContour[] {
+                new BezierContour() {
+                    Segments = new BezierPathSegment[] {
+                        new BezierPathSegment() { P0 = p0, P1 = p0 + (p1 - p0) / 3.0f, P2 = p0 + (p1 - p0) / 3.0f * 2.0f },
+                        new BezierPathSegment() { P0 = p1, P1 = p1 + (p2 - p1) / 3.0f, P2 = p1 + (p2 - p1) / 3.0f * 2.0f },
+                        new BezierPathSegment() { P0 = p2 }
+                    }
                 }
             },
             PathProps = new PathProperties() {

@@ -1,3 +1,50 @@
+## [1.0.0-preview.19] - 2018-09-24
+
+### Using viewBox for relative coordinates, when available
+### Fixed issue with gradient user-units when no viewBox is specified
+
+## [1.0.0-preview.18] - 2018-09-21
+
+### Improved texture import editor. Better basic tessellation defaults.
+### Enabled GPU instancing, _RendererColor works out-of-the-box
+### Made the auto-computed tessellation options less aggressive
+### Allowing different width/height when importing to a texture
+### Fixed flipped winding order when flipYAxis is false
+### Moved external libraries to their own namespaces
+### Moved the sprite stats over the preview
+### Filling atlas with opaque black to help with SVG sprite picking
+### Support for sample count (for import-to-texture)
+### Fixed SVGImageEditor for 2018.1
+### Setting DtdProcessing to ignore
+
+## [1.0.0-preview.17] - 2018-09-13
+
+### Support for sprite mesh type on textured sprites
+
+## [1.0.0-preview.16] - 2018-09-13
+
+### Fixed relative positioning with viewBox
+### Multiple object editing improvements
+### Fixed elliptical-arc-to error with large sweep angles
+### Fixed polygon winding after transform
+### Fixed <use> always overriding fill/stroke even when not set
+### Fixed "ProhibitDtd" obsolete warning on .NET 4.x backend
+### Node-by-id support
+### Added SVGImage for Canvas UI
+### Preserve viewport option
+### Support for auto-generate physics outline
+### Setting Closed=true closes the path connecting the last segment to the first instead of a straight line
+### Fixed issues with symbols and patterns usage
+### First iteration of "import to texture" feature
+### Improved SVGOrigin and pivot support
+### Deprecated Rectangle, Path, Filled and IDrawable. Only Shape remains.
+### Added support for flipYAxis in FillMesh method
+### Fixed support for empty 'd' elements
+### Fixed issue when symbols are defined after <use>
+### Fixed invalid SVG Origin when Y-axis is fipped
+### Fixed sprite editor align/pivot to not interfere with SVG origin value
+### Fixed missing Apply() after atlas generation
+
 ## [1.0.0-preview.15] - 2018-07-18
 
 ### Updated CHANGELOG.md

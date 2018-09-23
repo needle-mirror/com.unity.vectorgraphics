@@ -14,6 +14,19 @@ using UnityEngine.Experimental.Rendering;
 
 namespace Unity.VectorGraphics.Editor
 {
+    /// <summary>An enum describing how SVG files are imported.</summary>
+    public enum SVGType
+    {
+        /// <summary>The SVG file will be imported as a tessellated sprite</summary>
+        VectorSprite,
+
+        /// <summary>The SVG file will be imported as a textured sprite</summary>
+        TexturedSprite,
+
+        /// <summary>The SVG file will be imported as a Texture2D</summary>
+        Texture2D
+    }
+
     /// <summary>The SVG importer class.</summary>
     [Serializable]
     [ScriptedImporter(1, "svg")]
@@ -21,51 +34,192 @@ namespace Unity.VectorGraphics.Editor
     {
         internal static readonly string k_PackagePath = "Packages/com.unity.vectorgraphics";
 
+        /// <summary>How the SVG file will be imported</summary>
+        public SVGType SvgType {
+            get { return m_SvgType; }
+            set { m_SvgType = value; }
+        }
+        [SerializeField] private SVGType m_SvgType = SVGType.VectorSprite;
+
+        /// <summary>For textured sprite, the mesh type</summary>
+        public SpriteMeshType TexturedSpriteMeshType
+        {
+            get { return m_TexturedSpriteMeshType; }
+            set { m_TexturedSpriteMeshType = value; }
+        }
+        [SerializeField] private SpriteMeshType m_TexturedSpriteMeshType = SpriteMeshType.FullRect;
+
         /// <summary>The number of pixels per Unity units.</summary>
-        public float SvgPixelsPerUnit = 100.0f;
+        public float SvgPixelsPerUnit {
+            get { return m_SvgPixelsPerUnit; }
+            set { m_SvgPixelsPerUnit = value; }
+        }
+        [SerializeField] private float m_SvgPixelsPerUnit = 100.0f;
 
         /// <summary>Maximum resolution for gradient texture.</summary>
-        public UInt16 GradientResolution = 128;
+        public UInt16 GradientResolution {
+            get { return m_GradientResolution; }
+            set { m_GradientResolution = value; }
+        }
+        [SerializeField] private UInt16 m_GradientResolution = 128;
 
         /// <summary>The SVG sprite alignement.</summary>
-        public VectorUtils.Alignment Alignment;
+        public VectorUtils.Alignment Alignment {
+            get { return m_Alignment; }
+            set { m_Alignment = value; }
+        }
+        [SerializeField] private VectorUtils.Alignment m_Alignment;
 
         /// <summary>The custom pivot, when alignement is "Custom".</summary>
-        public Vector2 CustomPivot;
+        public Vector2 CustomPivot {
+            get { return m_CustomPivot; }
+            set { m_CustomPivot = value; }
+        }
+        [SerializeField] private Vector2 m_CustomPivot;
+
+        /// <summary>Automaticallly generates a physics shape.</summary>
+        public bool GeneratePhysicsShape {
+            get { return m_GeneratePhysicsShape; }
+            set { m_GeneratePhysicsShape = value; }
+        }
+        [SerializeField] private bool m_GeneratePhysicsShape;
+
+        /// <summary>Preserves the viewport defined in the SVG document.</summary>
+        public bool PreserveViewport {
+            get { return m_PreserveViewport; }
+            set { m_PreserveViewport = value; }
+        }
+        [SerializeField] private bool m_PreserveViewport;
 
         /// <summary>Use advanced settings.</summary>
-        public bool AdvancedMode = false;
+        public bool AdvancedMode {
+            get { return m_AdvancedMode; }
+            set { m_AdvancedMode = value; }
+        }
+        [SerializeField] private bool m_AdvancedMode;
 
         /// <summary>The predefined resolution used, when not in advanced mode.</summary>
-        public int PredefinedResolutionIndex = 1;
+        public int PredefinedResolutionIndex {
+            get { return m_PredefinedResolutionIndex; }
+            set { m_PredefinedResolutionIndex = value; }
+        }
+        [SerializeField] private int m_PredefinedResolutionIndex = 1;
 
         /// <summary>The target resolution on which this SVG is displayed.</summary>
-        public int TargetResolution = 1080;
+        public int TargetResolution {
+            get { return m_TargetResolution; }
+            set { m_TargetResolution = value; }
+        }
+        [SerializeField] private int m_TargetResolution = 1080;
 
         /// <summary>An additional scale factor on the target resolution.</summary>
-        public float ResolutionMultiplier = 1.0f;
+        public float ResolutionMultiplier {
+            get { return m_ResolutionMultiplier; }
+            set { m_ResolutionMultiplier = value; }
+        }
+        [SerializeField] private float m_ResolutionMultiplier = 1.0f;
 
         /// <summary>The uniform step distance used for tessellation.</summary>
-        public float StepDistance = 10.0f;
+        public float StepDistance {
+            get { return m_StepDistance; }
+            set { m_StepDistance = value; }
+        }
+        [SerializeField] private float m_StepDistance = 10.0f;
 
         /// <summary>Number of samples evaluated on paths.</summary>
-        public float SamplingStepDistance = 100.0f;
+        public float SamplingStepDistance {
+            get { return m_SamplingStepDistance; }
+            set { m_SamplingStepDistance = value; }
+        }
+        [SerializeField] private float m_SamplingStepDistance = 100.0f;
 
         /// <summary>Enables the "max coord deviation" constraint.</summary>
-        public bool MaxCordDeviationEnabled = false;
+        public bool MaxCordDeviationEnabled {
+            get { return m_MaxCordDeviationEnabled; }
+            set { m_MaxCordDeviationEnabled = value; }
+        }
+        [SerializeField] private bool m_MaxCordDeviationEnabled = false;
 
         /// <summary>Distance on the cord to a straight line between two points after which more tessellation will be generated.</summary>
-        public float MaxCordDeviation = 1.0f;
+        public float MaxCordDeviation {
+            get { return m_MaxCordDeviation; }
+            set { m_MaxCordDeviation = value; }
+        }
+        [SerializeField] private float m_MaxCordDeviation = 1.0f;
 
         /// <summary>Enables the "max tangent angle" constraint.</summary>
-        public bool MaxTangentAngleEnabled = false;
+        public bool MaxTangentAngleEnabled {
+            get { return m_MaxTangentAngleEnabled; }
+            set { m_MaxTangentAngleEnabled = value; }
+        }
+        [SerializeField] private bool m_MaxTangentAngleEnabled = false;
 
         /// <summary>Max tangent angle (in degrees) after which more tessellation will be generated.</summary>
-        public float MaxTangentAngle = 5.0f;
+        public float MaxTangentAngle {
+            get { return m_MaxTangentAngle; }
+            set { m_MaxTangentAngle = value; }
+        }
+        [SerializeField] private float m_MaxTangentAngle = 5.0f;
+
+        /// <summary>The size of the texture (only used when importing to a texture).</summary>
+        public bool KeepTextureAspectRatio {
+            get { return m_KeepTextureAspectRatio; }
+            set { m_KeepTextureAspectRatio = value; }
+        }
+        [SerializeField] private bool m_KeepTextureAspectRatio = true;
+
+        /// <summary>The size of the texture (only used when importing to a texture with "keep aspect ratio").</summary>
+        public int TextureSize {
+            get { return m_TextureSize; }
+            set { m_TextureSize = value; }
+        }
+        [SerializeField] private int m_TextureSize = 256;
+
+        /// <summary>The width of the texture (only used when importing to a texture).</summary>
+        public int TextureWidth {
+            get { return m_TextureWidth; }
+            set { m_TextureWidth = value; }
+        }
+        [SerializeField] private int m_TextureWidth = 256;
+
+        /// <summary>The height of the texture (only used when importing to a texture).</summary>
+        public int TextureHeight {
+            get { return m_TextureHeight; }
+            set { m_TextureHeight = value; }
+        }
+        [SerializeField] private int m_TextureHeight = 256;
+
+        /// <summary>The wrap mode of the texture (only used when importing to a texture).</summary>
+        public TextureWrapMode WrapMode {
+            get { return m_WrapMode; }
+            set { m_WrapMode = value; }
+        }
+        [SerializeField] private TextureWrapMode m_WrapMode = TextureWrapMode.Repeat;
+
+        /// <summary>The filter mode of the texture (only used when importing to a texture).</summary>
+        public FilterMode FilterMode {
+            get { return m_FilterMode; }
+            set { m_FilterMode = value; }
+        }
+        [SerializeField] private FilterMode m_FilterMode = FilterMode.Bilinear;
+
+        /// <summary>The number of samples per pixel (only used when importing to a texture).</summary>
+        public int SampleCount
+        {
+            get { return m_SampleCount; }
+            set { m_SampleCount = value; }
+        }
+        [SerializeField] private int m_SampleCount = 4;
 
         [SerializeField]
         private SVGSpriteData m_SpriteData = new SVGSpriteData();
         internal SVGSpriteData GetSVGSpriteData() { return m_SpriteData; }
+
+        internal Sprite GetImportingSprite() { return m_ImportingSprite; }
+        private Sprite m_ImportingSprite;
+
+        internal Texture2D GetImportingTexture2D() { return m_ImportingTexture2D; }
+        private Texture2D m_ImportingTexture2D;
 
         internal enum PredefinedResolution
         {
@@ -76,13 +230,18 @@ namespace Unity.VectorGraphics.Editor
             Custom
         }
 
+        private static float kDefaultPhysicsTessellationDetail = 0.25f;
+        private static byte kDefaultSpritePhysicsAlphaTolerance = 200;
+
         /// <summary>Imports an SVG asset</summary>
         /// <param name="ctx">The asset import context of the scripted importer</param>
         public override void OnImportAsset(AssetImportContext ctx)
         {
+            // We're using a hardcoded window size of 100x100. This way, using a pixels per point value of 100
+            // results in a sprite of size 1 when the SVG file has a viewbox specified.
             SVGParser.SceneInfo sceneInfo;
             using (var stream = new StreamReader(ctx.assetPath))
-                sceneInfo = SVGParser.ImportSVG(stream, 0, 1, (int)SvgPixelsPerUnit, (int)SvgPixelsPerUnit);
+                sceneInfo = SVGParser.ImportSVG(stream, 0, 1, 100, 100, PreserveViewport);
 
             if (sceneInfo.Scene == null || sceneInfo.Scene.Root == null)
                 throw new Exception("Wowzers!");
@@ -105,17 +264,149 @@ namespace Unity.VectorGraphics.Editor
             tessOptions.SamplingStepSize = 1.0f / (float)samplingStepDist;
             tessOptions.StepDistance = stepDist;
 
-            var geometry = VectorUtils.TessellateScene(sceneInfo.Scene, tessOptions, sceneInfo.NodeOpacity);
-            var sprite = VectorUtils.BuildSprite(geometry, SvgPixelsPerUnit, Alignment, CustomPivot, GradientResolution, true);
+            var rect = Rect.zero;
+            if (PreserveViewport)
+                rect = sceneInfo.SceneViewport;
 
-            OverridePhysicsShape(sprite);
-            GenerateAsset(ctx, sprite);
+            var geometry = VectorUtils.TessellateScene(sceneInfo.Scene, tessOptions, sceneInfo.NodeOpacity);
+            var sprite = VectorUtils.BuildSprite(geometry, rect, SvgPixelsPerUnit, Alignment, CustomPivot, GradientResolution, true);
+
+            var name = System.IO.Path.GetFileNameWithoutExtension(ctx.assetPath);
+            if (SvgType == SVGType.VectorSprite)
+                GenerateSpriteAsset(ctx, sprite, name);
+            else if (SvgType == SVGType.TexturedSprite)
+                GenerateTexturedSpriteAsset(ctx, sprite, name);
+            else if (SvgType == SVGType.Texture2D)
+                GenerateTexture2DAsset(ctx, sprite, name);
         }
 
-        private void OverridePhysicsShape(Sprite sprite)
+        private void GenerateSpriteAsset(AssetImportContext ctx, Sprite sprite, string name)
+        {
+            sprite.name = name + "Sprite";
+            if (sprite.texture != null)
+                sprite.texture.name = name + "Atlas";
+
+            m_ImportingSprite = sprite;
+
+            // Apply GUID from SpriteRect
+#if UNITY_2018_2_OR_NEWER
+            sprite.SetSpriteID(m_SpriteData.SpriteRect.spriteID);
+#else
+            var so = new SerializedObject(sprite);
+            so.FindProperty("m_SpriteID").stringValue = m_SpriteData.SpriteRect.spriteID.ToString();
+            so.ApplyModifiedPropertiesWithoutUndo();
+#endif
+
+            sprite.hideFlags = HideFlags.None;
+
+            ctx.AddObjectToAsset("sprite", sprite);
+
+            Material mat = MaterialForSVGSprite(sprite);
+
+            var gameObject = new GameObject(name);
+            var spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = sprite;
+            spriteRenderer.material = mat;
+
+            SetPhysicsShape(sprite);
+
+            if (sprite.texture != null)
+                ctx.AddObjectToAsset("texAtlas", sprite.texture);
+
+            ctx.AddObjectToAsset("gameObject", gameObject);
+            ctx.SetMainObject(gameObject);
+        }
+
+        private void GenerateTexturedSpriteAsset(AssetImportContext ctx, Sprite sprite, string name)
+        {
+            if (sprite.texture != null)
+                sprite.texture.name = name + "Atlas";
+
+            var tex = BuildTexture(sprite, name);
+
+            var texturedSprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), CustomPivot, SvgPixelsPerUnit, 0, TexturedSpriteMeshType);
+            texturedSprite.name = name;
+
+            m_ImportingSprite = texturedSprite;
+            m_ImportingTexture2D = tex;
+
+            // Apply GUID from SpriteRect
+#if UNITY_2018_2_OR_NEWER
+            texturedSprite.SetSpriteID(m_SpriteData.SpriteRect.spriteID);
+#else
+            var so = new SerializedObject(texturedSprite);
+            so.FindProperty("m_SpriteID").stringValue = m_SpriteData.SpriteRect.spriteID.ToString();
+            so.ApplyModifiedPropertiesWithoutUndo();
+#endif
+
+            texturedSprite.hideFlags = HideFlags.None;
+
+            SetPhysicsShape(texturedSprite);
+
+            ctx.AddObjectToAsset("sprite", texturedSprite);
+            ctx.AddObjectToAsset("tex", tex);
+            ctx.SetMainObject(tex);
+
+            if (sprite.texture != null)
+                GameObject.DestroyImmediate(sprite.texture);
+            GameObject.DestroyImmediate(sprite);
+        }
+
+        private void GenerateTexture2DAsset(AssetImportContext ctx, Sprite sprite, string name)
+        {
+            var tex = BuildTexture(sprite, name);
+
+            m_ImportingTexture2D = tex;
+
+            ctx.AddObjectToAsset("tex", tex);
+            ctx.SetMainObject(tex);
+
+            if (sprite.texture != null)
+                GameObject.DestroyImmediate(sprite.texture);
+            GameObject.DestroyImmediate(sprite);
+        }
+
+        private Texture2D BuildTexture(Sprite sprite, string name)
+        {
+            int textureWidth = 0;
+            int textureHeight = 0;
+            if (KeepTextureAspectRatio)
+            {
+                ComputeTextureDimensionsFromBounds(sprite, TextureSize, out textureWidth, out textureHeight);
+            }
+            else
+            {
+                textureWidth = TextureWidth;
+                textureHeight = TextureHeight;
+            }
+
+            Material mat = MaterialForSVGSprite(sprite);
+
+            var tex = VectorUtils.RenderSpriteToTexture2D(sprite, textureWidth, textureHeight, mat, SampleCount);
+            tex.hideFlags = HideFlags.None;
+            tex.name = name;
+            tex.wrapMode = WrapMode;
+            tex.filterMode = FilterMode;
+
+            return tex;
+        }
+
+        private void SetPhysicsShape(Sprite sprite)
         {
             var physicsDataProvider = (this as ISpriteEditorDataProvider).GetDataProvider<ISpritePhysicsOutlineDataProvider>();
             var outlines = physicsDataProvider.GetOutlines(m_SpriteData.SpriteRect.spriteID);
+            if (outlines.Count == 0)
+            {
+                if (!GeneratePhysicsShape)
+                    return;
+
+                var textureDataProvider = (this as ISpriteEditorDataProvider).GetDataProvider<ITextureDataProvider>();
+                var tex = textureDataProvider.GetReadableTexture2D();
+
+                outlines = InternalBridge.GenerateOutline(tex, new Rect(0,0,tex.width,tex.height), kDefaultPhysicsTessellationDetail, kDefaultSpritePhysicsAlphaTolerance, false);
+                if (outlines == null || outlines.Count == 0)
+                    return;
+            }
 
             int width;
             int height;
@@ -133,70 +424,65 @@ namespace Unity.VectorGraphics.Editor
                 }
             }
 
-            sprite.OverridePhysicsShape(outlines);
+            sprite.OverridePhysicsShape(outlines.Where(o => o.Length > 2).ToArray());
         }
 
-        private void GenerateAsset(AssetImportContext ctx, Sprite sprite)
+        private Material MaterialForSVGSprite(Sprite sprite)
         {
-            var name = System.IO.Path.GetFileNameWithoutExtension(ctx.assetPath);
-            sprite.name = name + "Sprite";
-
-            // Apply GUID from SpriteRect
-            var so = new SerializedObject(sprite);
-            so.FindProperty("m_SpriteID").stringValue = m_SpriteData.SpriteRect.spriteID.ToString();
-            so.ApplyModifiedPropertiesWithoutUndo();
-
-            ctx.AddObjectToAsset("sprite", sprite);
-
-            Material mat = null;
-
+            string path;
             if (sprite.texture != null)
-            {
                 // When texture is present, use the VectorGradient shader
-                mat = AssetDatabase.LoadMainAssetAtPath(k_PackagePath + "/Runtime/Materials/Unlit_VectorGradient.mat") as Material;
-                sprite.texture.name = name + "Atlas";
+                path = k_PackagePath + "/Runtime/Materials/Unlit_VectorGradient.mat";
+            else
+                path = k_PackagePath + "/Runtime/Materials/Unlit_Vector.mat";
+            return AssetDatabase.LoadAssetAtPath<Material>(path);
+        }
+
+        private void ComputeTextureDimensionsFromBounds(Sprite sprite, int textureSize, out int textureWidth, out int textureHeight)
+        {
+            var bounds = sprite.bounds;
+            if (bounds.size.y < Mathf.Epsilon)
+            {
+                textureWidth = textureSize;
+                textureHeight = textureSize;
+                return;
+            }
+
+            float ratio = bounds.size.x / bounds.size.y;
+            if (ratio >= 1.0f)
+            {
+                textureWidth = TextureSize;
+                textureHeight = Mathf.RoundToInt((float)TextureSize / ratio);
             }
             else
             {
-                mat = AssetDatabase.LoadMainAssetAtPath(k_PackagePath + "/Runtime/Materials/Unlit_Vector.mat") as Material;                
+                textureWidth = Mathf.RoundToInt((float)TextureSize * ratio);
+                textureHeight = TextureSize;
             }
-
-            var gameObject = new GameObject(name);
-            var spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
-            spriteRenderer.sprite = sprite;
-            spriteRenderer.material = mat;
-
-            if (sprite.texture != null)
-                ctx.AddObjectToAsset("texAtlas", sprite.texture);
-
-            ctx.AddObjectToAsset("gameObject", gameObject);
-            ctx.SetMainObject(gameObject);
         }
 
         private void ComputeTessellationOptions(SVGParser.SceneInfo sceneInfo, int targetResolution, float multiplier, out float stepDist, out float maxCord, out float maxTangent)
         {
             var bbox = VectorUtils.ApproximateSceneNodeBounds(sceneInfo.Scene.Root);
-            float maxDim = Mathf.Max(bbox.width, bbox.height);
-
-            float ppuRatio = Mathf.Clamp(1.0f / (pixelsPerUnit / 100.0f), 0.1f, 10.0f);
+            float maxDim = Mathf.Max(bbox.width, bbox.height) / SvgPixelsPerUnit;
 
             // The scene ratio gives a rough estimate of coverage % of the vector scene on the screen.
             // Higher values should result in a more dense tessellation.
-            float sceneRatio = ((targetResolution * multiplier * ppuRatio) / maxDim);
+            float sceneRatio = maxDim / (targetResolution * multiplier);
 
             stepDist = float.MaxValue; // No need for uniform step distance
-            maxCord = 0.5f / sceneRatio;
-            maxTangent = 1.0f / sceneRatio;
+            maxCord = Mathf.Max(0.01f, 75.0f * sceneRatio);
+            maxTangent = Mathf.Max(0.1f, 100.0f * sceneRatio);
         }
 
         internal static Sprite GetImportedSprite(string assetPath)
         {
-            var asset = AssetDatabase.LoadMainAssetAtPath(assetPath);
-            return GetImportedSprite(asset);
+            return AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
         }
 
         internal static Sprite GetImportedSprite(UnityEngine.Object asset)
         {
+
             var sprite = asset as Sprite;
             if (sprite == null)
             {
@@ -205,6 +491,11 @@ namespace Unity.VectorGraphics.Editor
                 sprite = sr != null ? sr.sprite : null;
             }
             return sprite;
+        }
+
+        internal static Texture2D GetImportedTexture2D(string assetPath)
+        {
+            return AssetDatabase.LoadMainAssetAtPath(assetPath) as Texture2D;
         }
 
         internal void TextureSizeForSpriteEditor(Sprite sprite, out int width, out int height)
@@ -283,6 +574,7 @@ namespace Unity.VectorGraphics.Editor
         void ISpriteEditorDataProvider.Apply()
         {
             var so = new SerializedObject(this);
+            m_SpriteData.Apply(so);
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

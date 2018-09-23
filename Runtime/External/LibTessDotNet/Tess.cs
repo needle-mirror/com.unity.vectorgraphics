@@ -34,6 +34,9 @@
 using System;
 using System.Diagnostics;
 
+namespace Unity.VectorGraphics.External
+{
+
 #if DOUBLE
 using Real = System.Double;
 namespace LibTessDotNet.Double
@@ -42,7 +45,7 @@ using Real = System.Single;
 namespace LibTessDotNet
 #endif
 {
-    public enum WindingRule
+    internal enum WindingRule
     {
         EvenOdd,
         NonZero,
@@ -51,21 +54,21 @@ namespace LibTessDotNet
         AbsGeqTwo
     }
 
-    public enum ElementType
+    internal enum ElementType
     {
         Polygons,
         ConnectedPolygons,
         BoundaryContours
     }
 
-    public enum ContourOrientation
+    internal enum ContourOrientation
     {
         Original,
         Clockwise,
         CounterClockwise
     }
 
-    public struct ContourVertex
+    internal struct ContourVertex
     {
         public Vec3 Position;
         public object Data;
@@ -76,9 +79,9 @@ namespace LibTessDotNet
         }
     }
 
-    public delegate object CombineCallback(Vec3 position, object[] data, Real[] weights);
+    internal delegate object CombineCallback(Vec3 position, object[] data, Real[] weights);
 
-    public partial class Tess
+    internal partial class Tess
     {
         private Mesh _mesh;
         private Vec3 _normal;
@@ -748,3 +751,5 @@ namespace LibTessDotNet
         }
     }
 }
+
+} // namespace Unity.VectorGraphics.External
