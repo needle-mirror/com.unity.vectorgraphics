@@ -1,3 +1,8 @@
+## [1.0.0-preview.20] - 2018-09-26
+
+### Fixed sprite value not being set in SVGImage's sprite property
+### Removed "Per-Axis" texture wrap mode
+
 ## [1.0.0-preview.19] - 2018-09-24
 
 ### Using viewBox for relative coordinates, when available

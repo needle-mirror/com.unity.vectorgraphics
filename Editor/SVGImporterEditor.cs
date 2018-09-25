@@ -134,8 +134,7 @@ namespace Unity.VectorGraphics.Editor
             new GUIContent("Repeat"),
             new GUIContent("Clamp"),
             new GUIContent("Mirror"),
-            new GUIContent("Mirror Once"),
-            new GUIContent("Per-axis")
+            new GUIContent("Mirror Once")
         };
 
         public readonly int[] m_WrapModeValues =

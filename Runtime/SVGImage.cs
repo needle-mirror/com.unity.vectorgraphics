@@ -27,6 +27,7 @@ public class SVGImage : MaskableGraphic
         {
             if (m_Sprite !=  value)
             {
+                m_Sprite = value;
                 SetAllDirty();
             }
         }
