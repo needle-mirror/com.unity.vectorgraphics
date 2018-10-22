@@ -7,7 +7,7 @@ using UnityEngine.UI;
 /// <summary>
 /// Editor class used to edit UI Sprites.
 /// </summary>
-[CustomEditor(typeof(SVGImage))]
+[CustomEditor(typeof(SVGImage), isFallback = true)]
 [CanEditMultipleObjects]
 /// <summary>
 ///   Custom Editor for the Image Component.

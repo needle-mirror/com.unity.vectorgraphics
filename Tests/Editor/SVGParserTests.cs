@@ -367,4 +367,24 @@ public class SVGParserTests
         var shape = sceneInfo.NodeIDs["Rect"].Shapes[0];
         Assert.IsNull(shape.Fill);
     }
+
+    [Test]
+    public void PreserveViewport_ClipsInViewportSpace()
+    {
+        string svg =
+           @"<svg xmlns=""http://www.w3.org/2000/svg"" width=""100"" height=""100"" viewBox=""600 600 100 100"">
+                <rect x=""590"" y=""590"" width=""100"" height=""100"" />
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg), 0.0f, 1.0f, 0, 0, true);
+        var options = new VectorUtils.TessellationOptions() {
+            StepDistance = 100.0f,
+            MaxCordDeviation = float.MaxValue,
+            MaxTanAngleDeviation = float.MaxValue,
+            SamplingStepSize = 0.01f
+        };
+        var geom = VectorUtils.TessellateScene(sceneInfo.Scene, options);
+        Assert.That(geom.Count == 1);
+        Assert.That(geom[0].Vertices.Length > 0);
+    }
 }

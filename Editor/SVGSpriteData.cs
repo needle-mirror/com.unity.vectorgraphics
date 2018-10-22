@@ -38,7 +38,7 @@ namespace Unity.VectorGraphics.Editor
 
             var baseSP = so.FindProperty("m_SpriteData");
             var spriteRectSP = baseSP.FindPropertyRelative("SpriteRect");
-            SpriteRect.border = Vector4.zero;
+            SpriteRect.border = spriteRectSP.FindPropertyRelative("m_Border").vector4Value;
             SpriteRect.pivot = sprite.pivot / textureSize;
 
             var guidSP = spriteRectSP.FindPropertyRelative("m_SpriteID");
@@ -64,6 +64,11 @@ namespace Unity.VectorGraphics.Editor
                 var pivotSP = so.FindProperty("m_CustomPivot");
                 pivotSP.vector2Value = SpriteRect.pivot;
             }
+
+            var baseSP = so.FindProperty("m_SpriteData");
+            var spriteRectSP = baseSP.FindPropertyRelative("SpriteRect");
+            var borderSP = spriteRectSP.FindPropertyRelative("m_Border");
+            borderSP.vector4Value = SpriteRect.border;
         }
     }
 

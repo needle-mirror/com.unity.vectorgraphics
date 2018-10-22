@@ -324,7 +324,7 @@ namespace Unity.VectorGraphics.Editor
 
             var tex = BuildTexture(sprite, name);
 
-            var texturedSprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), CustomPivot, SvgPixelsPerUnit, 0, TexturedSpriteMeshType);
+            var texturedSprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), CustomPivot, SvgPixelsPerUnit, 0, TexturedSpriteMeshType, m_SpriteData.SpriteRect.border);
             texturedSprite.name = name;
 
             m_ImportingSprite = texturedSprite;
@@ -382,7 +382,11 @@ namespace Unity.VectorGraphics.Editor
 
             Material mat = MaterialForSVGSprite(sprite);
 
-            var tex = VectorUtils.RenderSpriteToTexture2D(sprite, textureWidth, textureHeight, mat, SampleCount);
+            // Expand edges to avoid bilinear filter "edge outlines" caused by transparent black background.
+            // Not necessary when using point filtering with 1 sample.
+            bool expandEdges = FilterMode != FilterMode.Point || SampleCount > 1;
+
+            var tex = VectorUtils.RenderSpriteToTexture2D(sprite, textureWidth, textureHeight, mat, SampleCount, expandEdges);
             tex.hideFlags = HideFlags.None;
             tex.name = name;
             tex.wrapMode = WrapMode;

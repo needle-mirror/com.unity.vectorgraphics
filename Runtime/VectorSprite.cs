@@ -251,7 +251,8 @@ namespace Unity.VectorGraphics
         /// <summary>Draws a vector sprite using the provided material.</summary>
         /// <param name="sprite">The sprite to render</param>
         /// <param name="mat">The material used for rendering</param>
-        public static void RenderSprite(Sprite sprite, Material mat) 
+        /// <param name="clear">If true, clear the render target before rendering</param>
+        public static void RenderSprite(Sprite sprite, Material mat, bool clear = true) 
         {
             float spriteWidth = sprite.rect.width;
             float spriteHeight = sprite.rect.height;
@@ -273,7 +274,9 @@ namespace Unity.VectorGraphics
             mat.SetTexture("_MainTex", sprite.texture);
             mat.SetPass(0);
 
-            GL.Clear(true, true, new Color(0f, 0f, 0f, 0f));
+            if (clear)
+                GL.Clear(true, true, Color.clear);
+
             GL.PushMatrix();
             GL.LoadOrtho();
             GL.Color(new Color(1, 1, 1, 1));
@@ -301,25 +304,64 @@ namespace Unity.VectorGraphics
             mat.SetTexture("_MainTex", null);
         }
 
+        private static Material s_ExpandEdgesMat;
+
         /// <summary>Renders a vector sprite to Texture2D.</summary>
         /// <param name="sprite">The sprite to render</param>
         /// <param name="width">The desired width of the resulting texture</param>
         /// <param name="height">The desired height of the resulting texture</param>
         /// <param name="mat">The material used to render the sprite</param>
         /// <param name="antiAliasing">The number of samples per pixel for anti-aliasing</param>
+        /// <param name="expandEdges">When true, expand the edges to avoid a dark banding effect caused by filtering. This is slower to render and uses more graphics memory.</param>
         /// <returns>A Texture2D object containing the rendered vector sprite</returns>
-        public static Texture2D RenderSpriteToTexture2D(Sprite sprite, int width, int height, Material mat, int antiAliasing = 1)
+        public static Texture2D RenderSpriteToTexture2D(Sprite sprite, int width, int height, Material mat, int antiAliasing = 1, bool expandEdges = false)
         {
             if (width <= 0 || height <= 0)
                 return null;
 
-            var tex = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
-            tex.antiAliasing = antiAliasing;
-
+            RenderTexture tex = null;
             var oldActive = RenderTexture.active;
-            RenderTexture.active = tex;
 
-            RenderSprite(sprite, mat);
+            var desc = new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32, 0) {
+                msaaSamples = 1,
+                sRGB = true
+            };
+
+            if (expandEdges)
+            {
+                // Draw the sprite normally to be used as a background, no-antialiasing
+                var normalTex = RenderTexture.GetTemporary(desc);
+                RenderTexture.active = normalTex;
+                RenderSprite(sprite, mat);
+
+                // Expand the edges and make completely transparent
+                if (s_ExpandEdgesMat == null)
+                    s_ExpandEdgesMat = new Material(Shader.Find("Hidden/VectorExpandEdges"));
+
+                var expandTex = RenderTexture.GetTemporary(desc);
+                RenderTexture.active = expandTex;
+                Graphics.Blit(normalTex, expandTex, s_ExpandEdgesMat, 0);
+                RenderTexture.ReleaseTemporary(normalTex);
+
+                // Draw the sprite again, but clear with the texture rendered in the previous step,
+                // this will make the bilinear filter to interpolate the colors with values different
+                // than "transparent black", which causes black-ish outlines around the shape.
+                desc.msaaSamples = antiAliasing;
+                tex = RenderTexture.GetTemporary(desc);
+                RenderTexture.active = tex;
+                Graphics.Blit(expandTex, tex);
+                RenderTexture.ReleaseTemporary(expandTex); // Use the expanded texture to clear the buffer
+
+                RenderTexture.active = tex;
+                RenderSprite(sprite, mat, false);
+            }
+            else
+            {
+                desc.msaaSamples = antiAliasing;
+                tex = RenderTexture.GetTemporary(desc);
+                RenderTexture.active = tex;
+                RenderSprite(sprite, mat);
+            }
 
             Texture2D copy = new Texture2D(width, height, TextureFormat.RGBA32, false);
             copy.hideFlags = HideFlags.HideAndDontSave;
@@ -327,9 +369,7 @@ namespace Unity.VectorGraphics
             copy.Apply();
 
             RenderTexture.active = oldActive;
-            tex.Release();
-
-            RenderTexture.DestroyImmediate(tex);
+            RenderTexture.ReleaseTemporary(tex);
 
             return copy;
         }

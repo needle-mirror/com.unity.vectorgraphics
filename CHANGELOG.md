@@ -1,3 +1,12 @@
+## [1.0.0-preview.21] - 2018-10-23
+
+### Added support for borders (slices) for textured sprites
+### Fixed viewport clipping working when viewBox is applied
+### Silenced obsolete warnings because of WWW usage
+### Fixed dark outlines when rendering to texture
+### Fixed alpha-blending in VectorGradient.shader
+### SVGImageEditor is now fallback custom editor
+
 ## [1.0.0-preview.20] - 2018-09-26
 
 ### Fixed sprite value not being set in SVGImage's sprite property

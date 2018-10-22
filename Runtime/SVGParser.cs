@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Xml;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace Unity.VectorGraphics
 {
@@ -89,9 +90,13 @@ namespace Unity.VectorGraphics
                     var rectClip = new Shape();
                     VectorUtils.MakeRectangleShape(rectClip, doc.sceneViewport);
 
-                    scene.Root.Clipper = new SceneNode()
+                    // We cannot add the clipper directly on scene.Root since it may have a viewbox transform applied.
+                    // The simplest is to replace the root node with the new "clipped" one, then the clipping
+                    // rectangle can stay in the viewport space (no need to take the viewbox transform into account).
+                    scene.Root = new SceneNode()
                     {
-                        Shapes = new List<Shape>() { rectClip }
+                        Children = new List<SceneNode> { scene.Root },
+                        Clipper = new SceneNode() { Shapes = new List<Shape>() { rectClip } }
                     };
                 }
             }
@@ -399,12 +404,18 @@ namespace Unity.VectorGraphics
                 {
                     if (!url.Contains("://"))
                         url = "file://Assets/" + url;
+
+                    #pragma warning disable 618
+                    // WWW is obsolete (replaced with UnityWebRequest), but this is the class that works best
+                    // with editor code. We will continue to use WWW until UnityWebRequest works better in an editor
+                    // environment.
                     using (WWW www = new WWW(url))
                     {
                         while (www.keepWaiting)
                             System.Threading.Thread.Sleep(10); // Progress bar please...
                         textureFill.Texture = www.texture;
                     }
+                    #pragma warning restore 618
                 }
 
                 if (textureFill.Texture != null)

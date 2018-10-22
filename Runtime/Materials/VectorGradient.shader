@@ -20,7 +20,7 @@
         Cull Off
         Lighting Off
         ZWrite Off
-        Blend SrcAlpha OneMinusSrcAlpha
+        Blend One OneMinusSrcAlpha
 
         Pass
         {
@@ -153,7 +153,10 @@
                 texColor = fixed4(GammaToLinearSpace(texColor.rgb), texColor.a);
                 #endif
 
-                return texColor * i.color;
+                fixed4 finalColor = texColor * i.color;
+                finalColor.rgb *= finalColor.a;
+
+                return finalColor;
             }
             ENDCG
         }
