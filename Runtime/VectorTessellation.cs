@@ -194,7 +194,8 @@ namespace Unity.VectorGraphics
         static bool TryGetMoreRemainingUnits(ref float unitsRemaining, PathDistanceForwardIterator pathIt, float startingLength, float distance, float stepDistance)
         {
             float distanceCrossedSoFar = pathIt.LengthSoFar - startingLength;
-            if (distanceCrossedSoFar >= distance - Epsilon * 100.0f)
+            float epsilon = Math.Max(Epsilon, distance * Epsilon * 100.0f);
+            if ((distance - distanceCrossedSoFar) <= epsilon)
                 return false;
             if (distanceCrossedSoFar + stepDistance > distance)
                 unitsRemaining = distance - distanceCrossedSoFar;

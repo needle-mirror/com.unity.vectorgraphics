@@ -231,6 +231,7 @@ namespace Unity.VectorGraphics
                 throw SVGFormatException.StackError;
 
             PostProcess(scene.Root);
+            RemoveInvisibleNodes();
         }
 
         public Dictionary<SceneNode, float> NodeOpacities { get { return nodeOpacity; } }
@@ -269,15 +270,19 @@ namespace Unity.VectorGraphics
                     currentSceneNode.Push(childVectorNode);
                 }
 
-                styleResolver.PushNode(child);
+                styles.PushNode(child);
 
-                if (childVectorNode != null && styleResolver.Evaluate("display") == "none")
-                    invisibleNodes.Add(new NodeWithParent() { node = childVectorNode, parent = sceneNode } );
+                if (childVectorNode != null)
+                {
+                    styles.SaveLayerForSceneNode(childVectorNode);
+                    if (styles.Evaluate("display") == "none")
+                        invisibleNodes.Add(new NodeWithParent() { node = childVectorNode, parent = sceneNode });
+                }
 
                 handler();
                 ParseChildren(child, child.Name); // Recurse
 
-                styleResolver.PopNode();
+                styles.PopNode();
 
                 if (addToSceneHierarchy && currentSceneNode.Pop() != childVectorNode)
                     throw SVGFormatException.StackError;
@@ -293,7 +298,7 @@ namespace Unity.VectorGraphics
             ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
-            var fill = SVGAttribParser.ParseFill(node, svgObjects, styleResolver);
+            var fill = SVGAttribParser.ParseFill(node, svgObjects, styles);
             PathCorner strokeCorner;
             PathEnding strokeEnding;
             var stroke = ParseStrokeAttributeSet(node, out strokeCorner, out strokeEnding);
@@ -342,7 +347,7 @@ namespace Unity.VectorGraphics
             ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
-            var fill = SVGAttribParser.ParseFill(node, svgObjects, styleResolver);
+            var fill = SVGAttribParser.ParseFill(node, svgObjects, styles);
             PathCorner strokeCorner;
             PathEnding strokeEnding;
             var stroke = ParseStrokeAttributeSet(node, out strokeCorner, out strokeEnding);
@@ -568,7 +573,7 @@ namespace Unity.VectorGraphics
             ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
-            var fill = SVGAttribParser.ParseFill(node, svgObjects, styleResolver);
+            var fill = SVGAttribParser.ParseFill(node, svgObjects, styles);
             PathCorner strokeCorner;
             PathEnding strokeEnding;
             var stroke = ParseStrokeAttributeSet(node, out strokeCorner, out strokeEnding);
@@ -600,7 +605,7 @@ namespace Unity.VectorGraphics
             ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
-            var fill = SVGAttribParser.ParseFill(node, svgObjects, styleResolver);
+            var fill = SVGAttribParser.ParseFill(node, svgObjects, styles);
             PathCorner strokeCorner;
             PathEnding strokeEnding;
             var stroke = ParseStrokeAttributeSet(node, out strokeCorner, out strokeEnding);
@@ -651,7 +656,7 @@ namespace Unity.VectorGraphics
             ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
-            var fill = SVGAttribParser.ParseFill(node, svgObjects, styleResolver);
+            var fill = SVGAttribParser.ParseFill(node, svgObjects, styles);
             PathCorner strokeCorner;
             PathEnding strokeEnding;
             var stroke = ParseStrokeAttributeSet(node, out strokeCorner, out strokeEnding);
@@ -947,7 +952,7 @@ namespace Unity.VectorGraphics
             ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
-            var fill = SVGAttribParser.ParseFill(node, svgObjects, styleResolver);
+            var fill = SVGAttribParser.ParseFill(node, svgObjects, styles);
             PathCorner strokeCorner;
             PathEnding strokeEnding;
             var stroke = ParseStrokeAttributeSet(node, out strokeCorner, out strokeEnding);
@@ -990,13 +995,13 @@ namespace Unity.VectorGraphics
 
             GradientStop stop = new GradientStop();
 
-            string stopColor = styleResolver.Evaluate("stop-color");
+            string stopColor = styles.Evaluate("stop-color");
             Color color = stopColor != null ? SVGAttribParser.ParseColor(stopColor) : Color.black;
 
             color.a = AttribFloatVal("stop-opacity", 1.0f);
             stop.Color = color;
 
-            string offsetString = styleResolver.Evaluate("offset");
+            string offsetString = styles.Evaluate("offset");
             if (!string.IsNullOrEmpty(offsetString))
             {
                 bool percentage = offsetString.EndsWith("%");
@@ -1036,7 +1041,7 @@ namespace Unity.VectorGraphics
                 scene.Root = sceneNode;
             }
 
-            styleResolver.PushNode(node);
+            styles.PushNode(node);
 
             ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
@@ -1063,13 +1068,14 @@ namespace Unity.VectorGraphics
                 currentViewBoxSize.Pop();
             currentContainerSize.Pop();
 
-            styleResolver.PopNode();
+            styles.PopNode();
         }
 
         void symbol()
         {
             var node = docReader.VisitCurrent();
             var sceneNode = new SceneNode(); // A new scene node instead of one precreated for us
+            string id = node["id"];
 
             ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
@@ -1081,18 +1087,6 @@ namespace Unity.VectorGraphics
                 currentViewBoxSize.Push(viewBoxInfo.ViewBox.size);
 
             symbolViewBoxes[sceneNode] = viewBoxInfo;
-
-            // Resolve any node that was referencing this symbol
-            string id = node["id"];
-            if (!string.IsNullOrEmpty(id))
-            {
-                List<NodeReferenceData> refList;
-                if (postponedSymbolData.TryGetValue(id, out refList))
-                {
-                    foreach (var refData in refList)
-                        ResolveReferencedNode(sceneNode, refData);
-                }
-            }
 
             AddToSVGDictionaryIfPossible(node, sceneNode);
             if (ShouldDeclareSupportedChildren(node))
@@ -1107,6 +1101,17 @@ namespace Unity.VectorGraphics
                 currentViewBoxSize.Pop();
 
             ParseClipAndMask(node, sceneNode);
+
+            // Resolve any previous node that was referencing this symbol
+            if (!string.IsNullOrEmpty(id))
+            {
+                List<NodeReferenceData> refList;
+                if (postponedSymbolData.TryGetValue(id, out refList))
+                {
+                    foreach (var refData in refList)
+                        ResolveReferencedNode(sceneNode, refData, true);
+                }
+            }
         }
 
         void use()
@@ -1117,23 +1122,9 @@ namespace Unity.VectorGraphics
             ParseOpacity(sceneNode);
 
             var sceneViewport = ParseViewport(node, sceneNode, Vector2.zero);
-
-            var fill = SVGAttribParser.ParseFill(node, svgObjects, styleResolver, SVGResolveLimit.Single, false);
-            PathCorner strokeCorner;
-            PathEnding strokeEnding;
-            var stroke = ParseStrokeAttributeSet(node, out strokeCorner, out strokeEnding, SVGResolveLimit.Single);
-
-            // We check for a non-null string since fill="none" will return a null fill, but we still want to override in this case
-            bool hasFill = styleResolver.Evaluate("fill") != null;
-            bool hasStroke = styleResolver.Evaluate("stroke") != null;
-
             var refData = new NodeReferenceData() {
                 node = sceneNode,
                 viewport = sceneViewport,
-                overrideFill = hasFill,
-                fill = fill,
-                overrideStroke = hasStroke,
-                stroke = stroke,
                 id = node["id"]
             };
 
@@ -1156,7 +1147,7 @@ namespace Unity.VectorGraphics
             sceneNode.Transform = sceneNode.Transform * Matrix2D.Translate(sceneViewport.position);
 
             if (referencedNode != null)
-                ResolveReferencedNode(referencedNode, refData);
+                ResolveReferencedNode(referencedNode, refData, false);
 
             ParseClipAndMask(node, sceneNode);
 
@@ -1171,7 +1162,7 @@ namespace Unity.VectorGraphics
             var text = docReader.ReadTextWithinElement();
 
             if (text.Length > 0)
-                styleResolver.PushStyleSheet(SVGStyleSheetUtils.Parse(text), true);
+                styles.SetGlobalStyleSheet(SVGStyleSheetUtils.Parse(text));
 
             if (ShouldDeclareSupportedChildren(node))
                 SupportElems(node);  // No children supported
@@ -1179,7 +1170,7 @@ namespace Unity.VectorGraphics
         #endregion
 
         #region Symbol Reference Processing
-        private void ResolveReferencedNode(SceneNode referencedNode, NodeReferenceData refData)
+        private void ResolveReferencedNode(SceneNode referencedNode, NodeReferenceData refData, bool isDeferred)
         {
             // Note we don't use the viewport size because the <use> element doesn't establish a viewport for its referenced elements
             ViewBoxInfo viewBoxInfo;
@@ -1189,26 +1180,64 @@ namespace Unity.VectorGraphics
             if (refData.node.Children == null)
                 refData.node.Children = new List<SceneNode>();
 
-            SceneNode node = referencedNode;
-            if (referencedNode.Shapes != null && (refData.overrideFill || refData.overrideStroke))
+            SVGStyleResolver.StyleLayer rootLayer = null;
+            if (isDeferred)
             {
-                // Clone the node to override the fill/stroke properties
-                node = CloneSceneNode(referencedNode);
-                foreach (var shape in node.Shapes)
-                {
-                    if (refData.overrideFill)
-                    {
-                        shape.Fill = refData.fill;
-                    }
-
-                    if (refData.overrideStroke)
-                    {
-                        var props = shape.PathProps;
-                        props.Stroke = refData.stroke;
-                        shape.PathProps = props;
-                    }
-                }
+                // If deferred, push back the original <use> tag style layer to be in the same "style environment"
+                rootLayer = styles.GetLayerForScenNode(refData.node);
+                if (rootLayer != null)
+                    styles.PushLayer(rootLayer);
             }
+
+            // Activate the styles of the referenced node
+            var styleLayer = nodeStyleLayers[referencedNode];
+            if (styleLayer != null)
+                styles.PushLayer(styleLayer);
+
+            // Build a map to be able to retrieve the original node's style layer
+            var originalNodes = new List<SceneNode>(10);
+            foreach (var child in VectorUtils.SceneNodes(referencedNode))
+                originalNodes.Add(child);
+
+            var node = CloneSceneNode(referencedNode);
+
+            int originalIndex = 0;
+            foreach (var child in VectorUtils.SceneNodes(node))
+            {
+                var nodeIndex = originalIndex++;
+                if (child.Shapes == null)
+                    continue;
+
+                var originalNode = originalNodes[nodeIndex];
+                var layer = styles.GetLayerForScenNode(originalNode);
+                if (layer != null)
+                    styles.PushLayer(layer);
+
+                bool isDefaultFill;
+                var fill = SVGAttribParser.ParseFill(null, svgObjects, styles, Inheritance.Inherited, out isDefaultFill);
+                PathCorner strokeCorner;
+                PathEnding strokeEnding;
+                var stroke = ParseStrokeAttributeSet(null, out strokeCorner, out strokeEnding);
+
+                foreach (var shape in child.Shapes)
+                {
+                    var pathProps = shape.PathProps;
+                    pathProps.Stroke = stroke;
+                    pathProps.Corners = strokeCorner;
+                    pathProps.Head = strokeEnding;
+                    shape.PathProps = pathProps;
+                    shape.Fill = isDefaultFill ? shape.Fill : fill;
+                }
+
+                if (layer != null)
+                    styles.PopLayer();
+            }
+
+            if (styleLayer != null)
+                styles.PopLayer();
+
+            if (rootLayer != null)
+                styles.PopLayer();
 
             // We process the node ID here to refer to the proper scene node
             if (!string.IsNullOrEmpty(refData.id))
@@ -1241,12 +1270,19 @@ namespace Unity.VectorGraphics
                     shapes.Add(CloneShape(d));
             }
 
-            return new SceneNode() {
+            var n = new SceneNode() {
                 Children = children,
                 Shapes = shapes,
                 Transform = node.Transform,
                 Clipper = CloneSceneNode(node.Clipper)
             };
+
+            if (nodeGlobalSceneState.ContainsKey(node))
+                nodeGlobalSceneState[n] = nodeGlobalSceneState[node];
+            if (nodeOpacity.ContainsKey(node))
+                nodeOpacity[n] = nodeOpacity[node];
+
+            return n;
         }
 
         private Shape CloneShape(Shape shape)
@@ -1313,7 +1349,7 @@ namespace Unity.VectorGraphics
                         stops[i] = new GradientStop() { Color = stop.Color, StopPercentage = stop.StopPercentage };
                     }
                 }
-                f = new GradientFill() {
+                var gradientFill = new GradientFill() {
                     Type = grad.Type,
                     Stops = stops,
                     Mode = grad.Mode,
@@ -1321,6 +1357,8 @@ namespace Unity.VectorGraphics
                     Addressing = grad.Addressing,
                     RadialFocus = grad.RadialFocus
                 };
+                gradientExInfo[gradientFill] = gradientExInfo[grad];
+                f = gradientFill;
             }
             else if (fill is TextureFill)
             {
@@ -1398,21 +1436,21 @@ namespace Unity.VectorGraphics
         int AttribIntVal(string attribName) { return AttribIntVal(attribName, 0); }
         int AttribIntVal(string attribName, int defaultVal)
         {
-            string val = styleResolver.Evaluate(attribName);
+            string val = styles.Evaluate(attribName);
             return (val != null) ? int.Parse(val) : defaultVal;
         }
 
         float AttribFloatVal(string attribName) { return AttribFloatVal(attribName, 0.0f); }
         float AttribFloatVal(string attribName, float defaultVal)
         {
-            string val = styleResolver.Evaluate(attribName);
+            string val = styles.Evaluate(attribName);
             return (val != null) ? SVGAttribParser.ParseFloat(val) : defaultVal;
         }
 
         float AttribLengthVal(XmlReaderIterator.Node node, string attribName, DimType dimType) { return AttribLengthVal(node, attribName, 0.0f, dimType); }
         float AttribLengthVal(XmlReaderIterator.Node node, string attribName, float defaultUnitVal, DimType dimType)
         {
-            var val = styleResolver.Evaluate(attribName);
+            var val = styles.Evaluate(attribName);
             return AttribLengthVal(val, node, attribName, defaultUnitVal, dimType);
         }
 
@@ -1597,29 +1635,29 @@ namespace Unity.VectorGraphics
             sceneNode.Transform = sceneNode.Transform * Matrix2D.Scale(scale) * Matrix2D.Translate(offset);
         }
 
-        Stroke ParseStrokeAttributeSet(XmlReaderIterator.Node node, out PathCorner strokeCorner, out PathEnding strokeEnding, SVGResolveLimit limit = SVGResolveLimit.Hierarchy)
+        Stroke ParseStrokeAttributeSet(XmlReaderIterator.Node node, out PathCorner strokeCorner, out PathEnding strokeEnding, Inheritance inheritance = Inheritance.Inherited)
         {
-            var stroke = SVGAttribParser.ParseStrokeAndOpacity(node, svgObjects, styleResolver, limit);
+            var stroke = SVGAttribParser.ParseStrokeAndOpacity(node, svgObjects, styles, inheritance);
             strokeCorner = PathCorner.Tipped;
             strokeEnding = PathEnding.Chop;
             if (stroke != null)
             {
-                string strokeWidth = styleResolver.Evaluate("stroke-width", limit);
+                string strokeWidth = styles.Evaluate("stroke-width", inheritance);
                 stroke.HalfThickness = AttribLengthVal(strokeWidth, node, "stroke-width", 1.0f, DimType.Length) * 0.5f;
-                switch (styleResolver.Evaluate("stroke-linecap", limit))
+                switch (styles.Evaluate("stroke-linecap", inheritance))
                 {
                     case "butt": strokeEnding = PathEnding.Chop; break;
                     case "square": strokeEnding = PathEnding.Square; break;
                     case "round": strokeEnding = PathEnding.Round; break;
                 }
-                switch (styleResolver.Evaluate("stroke-linejoin", limit))
+                switch (styles.Evaluate("stroke-linejoin", inheritance))
                 {
                     case "miter": strokeCorner = PathCorner.Tipped; break;
                     case "round": strokeCorner = PathCorner.Round; break;
                     case "bevel": strokeCorner = PathCorner.Beveled; break;
                 }
 
-                string pattern = styleResolver.Evaluate("stroke-dasharray", limit);
+                string pattern = styles.Evaluate("stroke-dasharray", inheritance);
                 if (pattern != null && pattern != "none")
                 {
                     string[] entries = pattern.Split(whiteSpaceNumberChars, StringSplitOptions.RemoveEmptyEntries);
@@ -1636,11 +1674,11 @@ namespace Unity.VectorGraphics
                             stroke.Pattern[i + entries.Length] = stroke.Pattern[i];
                     }
 
-                    var dashOffset = styleResolver.Evaluate("stroke-dashoffset", SVGResolveLimit.Hierarchy);
+                    var dashOffset = styles.Evaluate("stroke-dashoffset", inheritance);
                     stroke.PatternOffset = AttribLengthVal(dashOffset, node, "stroke-dashoffset", 0.0f, DimType.Length);
                 }
 
-                var strokeMiterLimit = styleResolver.Evaluate("stroke-miterlimit", SVGResolveLimit.Hierarchy);
+                var strokeMiterLimit = styles.Evaluate("stroke-miterlimit", inheritance);
                 stroke.TippedCornerLimit = AttribLengthVal(strokeMiterLimit, node, "stroke-miterlimit", 4.0f, DimType.Length);
                 if (stroke.TippedCornerLimit < 1.0f)
                     throw node.GetException("'stroke-miterlimit' should be greater or equal to 1");
@@ -1652,7 +1690,12 @@ namespace Unity.VectorGraphics
         {
             string id = node["id"];
             if (!string.IsNullOrEmpty(id))
+            {
                 nodeIDs[id] = sceneNode;
+
+                // Store the style layer of this node since it can be referenced later by a <use> tag
+                nodeStyleLayers[sceneNode] = styles.PeekLayer();
+            }
         }
 
         float ParseOpacity(SceneNode sceneNode)
@@ -1672,7 +1715,7 @@ namespace Unity.VectorGraphics
         void ParseClip(XmlReaderIterator.Node node, SceneNode sceneNode)
         {
             string reference = null;
-            string clipPath = styleResolver.Evaluate("clip-path");
+            string clipPath = styles.Evaluate("clip-path");
             if (clipPath != null)
                 reference = SVGAttribParser.ParseURLRef(clipPath);
 
@@ -1768,7 +1811,6 @@ namespace Unity.VectorGraphics
         void PostProcess(SceneNode root)
         {
             AdjustFills(root);
-            RemoveInvisibleNodes();
         }
 
         struct HierarchyUpdate
@@ -2058,6 +2100,7 @@ namespace Unity.VectorGraphics
         Dictionary<SceneNode, NodeGlobalSceneState> nodeGlobalSceneState = new Dictionary<SceneNode, NodeGlobalSceneState>();
         Dictionary<SceneNode, float> nodeOpacity = new Dictionary<SceneNode, float>();
         Dictionary<string, SceneNode> nodeIDs = new Dictionary<string, SceneNode>();
+        Dictionary<SceneNode, SVGStyleResolver.StyleLayer> nodeStyleLayers = new Dictionary<SceneNode, SVGStyleResolver.StyleLayer>();
         Dictionary<SceneNode, ClipData> clipData = new Dictionary<SceneNode, ClipData>();
         Dictionary<SceneNode, PatternData> patternData = new Dictionary<SceneNode, PatternData>();
         Dictionary<SceneNode, MaskData> maskData = new Dictionary<SceneNode, MaskData>();
@@ -2069,7 +2112,7 @@ namespace Unity.VectorGraphics
         GradientFill currentGradientFill;
         ElemHandler[] allElems;
         HashSet<ElemHandler> elemsToAddToHierarchy;
-        SVGStyleResolver styleResolver = new SVGStyleResolver();
+        SVGStyleResolver styles = new SVGStyleResolver();
 
         internal Rect sceneViewport;
 
@@ -2123,118 +2166,117 @@ namespace Unity.VectorGraphics
         {
             public SceneNode node;
             public Rect viewport;
-            public bool overrideFill;
-            public IFill fill;
-            public bool overrideStroke;
-            public Stroke stroke;
             public string id;
         }
     }
 
-    internal enum SVGResolveLimit
+    internal enum Inheritance
     {
-        Single,
-        Hierarchy
+        None,
+        Inherited
     }
 
     internal class SVGStyleResolver
     {
-        public SVGStyleResolver()
-        {
-            styleSheets = new List<SVGStyleSheet>();
-            attributeSheets = new List<SVGPropertySheet>();
-            nodes = new List<NodeData>();
-            globalStyleSheet = new SVGStyleSheet();
-        }
-
         public void PushNode(XmlReaderIterator.Node node)
         {
-            var elem = new NodeData();
-            elem.node = node;
-            elem.name = node.Name;
+            var nodeData = new NodeData();
+            nodeData.node = node;
+            nodeData.name = node.Name;
             var klass = node["class"];
             if (klass != null)
-                elem.classes = node["class"].Split(' ').Select(x => x.Trim()).ToList();
+                nodeData.classes = node["class"].Split(' ').Select(x => x.Trim()).ToList();
             else
-                elem.classes = new List<string>();
-            elem.classes = SortedClasses(elem.classes).ToList();
-            elem.id = node["id"];
+                nodeData.classes = new List<string>();
+            nodeData.classes = SortedClasses(nodeData.classes).ToList();
+            nodeData.id = node["id"];
 
-            nodes.Add(elem);
-
-            attributeSheets.Add(node.GetAttributes());
+            var layer = new StyleLayer();
+            layer.nodeData = nodeData;
+            layer.attributeSheet = node.GetAttributes();
+            layer.styleSheet = new SVGStyleSheet();
 
             var cssText = node["style"];
             if (cssText != null)
             {
                 var props = SVGStyleSheetUtils.ParseInline(cssText);
-                var sheet = new SVGStyleSheet();
-                sheet[node.Name] = props;
-                PushStyleSheet(sheet);
+                layer.styleSheet[node.Name] = props;
             }
-            else
-            {
-                PushStyleSheet(new SVGStyleSheet());
-            }
+
+            PushLayer(layer);
         }
 
         public void PopNode()
         {
-            if (nodes.Count == 0)
+            PopLayer();
+        }
+
+        public void PushLayer(StyleLayer layer)
+        {
+            layers.Add(layer);
+        }
+
+        public void PopLayer()
+        {
+            if (layers.Count == 0)
                 throw SVGFormatException.StackError;
 
-            nodes.RemoveAt(nodes.Count-1);
-            attributeSheets.RemoveAt(attributeSheets.Count-1);
-            styleSheets.RemoveAt(styleSheets.Count-1);
+            layers.RemoveAt(layers.Count - 1);
         }
 
-        public void PushStyleSheet(SVGStyleSheet sheet, bool isGlobal = false)
+        public StyleLayer PeekLayer()
         {
-            if (!isGlobal)
-                styleSheets.Add(sheet);
-            else
-            {
-                foreach (var sel in sheet.selectors)
-                    globalStyleSheet[sel] = sheet[sel];
-            }
+            if (layers.Count == 0)
+                return null;
+            return layers[layers.Count-1];
         }
 
-        public void PopStyleSheet()
+        public void SaveLayerForSceneNode(SceneNode node)
         {
-            if (styleSheets.Count == 0)
-                throw SVGFormatException.StackError;
-
-            styleSheets.RemoveAt(styleSheets.Count-1);
+            nodeLayers[node] = PeekLayer();
         }
 
-        public string Evaluate(string attribName, SVGResolveLimit limit = SVGResolveLimit.Single)
+        public StyleLayer GetLayerForScenNode(SceneNode node)
         {
-            for (int i = nodes.Count-1; i >= 0; --i)
+            if (!nodeLayers.ContainsKey(node))
+                return null;
+            return nodeLayers[node];
+        }
+
+        public void SetGlobalStyleSheet(SVGStyleSheet sheet)
+        {
+            foreach (var sel in sheet.selectors)
+                globalStyleSheet[sel] = sheet[sel];
+        }
+
+        public string Evaluate(string attribName, Inheritance inheritance = Inheritance.None)
+        {
+            for (int i = layers.Count-1; i >= 0; --i)
             {
                 string attrib = null;
-                if (LookupStyleOrAttribute(nodes[i], attribName, styleSheets[i], attributeSheets[i], limit, out attrib))
+                if (LookupStyleOrAttribute(layers[i], attribName, inheritance, out attrib))
                     return attrib;
                 
-                if (limit == SVGResolveLimit.Single)
+                if (inheritance == Inheritance.None)
                     break;
             }
             return null;
         }
 
-        private bool LookupStyleOrAttribute(NodeData nodeData, string attribName, SVGStyleSheet styleSheet, SVGPropertySheet propSheet, SVGResolveLimit limit, out string attrib)
+        private bool LookupStyleOrAttribute(StyleLayer layer, string attribName, Inheritance inheritance, out string attrib)
         {
             // Try to match a CSS style first
-            if (LookupProperty(nodeData, attribName, styleSheet, out attrib))
+            if (LookupProperty(layer.nodeData, attribName, layer.styleSheet, out attrib))
                 return true;
 
             // Try to match a global CSS style
-            if (LookupProperty(nodeData, attribName, globalStyleSheet, out attrib))
+            if (LookupProperty(layer.nodeData, attribName, globalStyleSheet, out attrib))
                 return true;
 
             // Else, fallback on attribute
-            if (propSheet.ContainsKey(attribName))
+            if (layer.attributeSheet.ContainsKey(attribName))
             {
-                attrib = propSheet[attribName];
+                attrib = layer.attributeSheet[attribName];
                 return true;
             }
 
@@ -2257,6 +2299,9 @@ namespace Unity.VectorGraphics
             }
 
             if (LookupPropertyInSheet(sheet, attribName, name, out val))
+                return true;
+
+            if (LookupPropertyInSheet(sheet, attribName, "*", out val))
                 return true;
 
             val = null;
@@ -2287,8 +2332,8 @@ namespace Unity.VectorGraphics
 
         private IEnumerable<string> SortedClasses(List<string> classes)
         {
-            // Classes should be matched by the inverse order they appeared in the sheet
-            // (i.e., the last selector specified has higher precedence).
+            // We match classes in reverse order of their appearance. This isn't conformant to CSS selectors priority,
+            // but this works well enough for auto-generated CSS styles.
             foreach (var sel in globalStyleSheet.selectors.Reverse())
             {
                 if (sel[0] != '.')
@@ -2299,7 +2344,7 @@ namespace Unity.VectorGraphics
             }
         }
 
-        struct NodeData
+        public struct NodeData
         {
             public XmlReaderIterator.Node node;
             public string name;
@@ -2307,11 +2352,16 @@ namespace Unity.VectorGraphics
             public string id;
         }
 
-        List<SVGStyleSheet> styleSheets;
-        List<SVGPropertySheet> attributeSheets;
-        List<NodeData> nodes;
+        public class StyleLayer
+        {
+            public SVGStyleSheet styleSheet;
+            public SVGPropertySheet attributeSheet;
+            public NodeData nodeData;
+        }
 
-        SVGStyleSheet globalStyleSheet;
+        private List<StyleLayer> layers = new List<StyleLayer>();
+        private SVGStyleSheet globalStyleSheet = new SVGStyleSheet();
+        private Dictionary<SceneNode, StyleLayer> nodeLayers = new Dictionary<SceneNode, StyleLayer>();
     }
 
     internal class SVGAttribParser
@@ -2354,11 +2404,17 @@ namespace Unity.VectorGraphics
             }
         }
 
-        public static IFill ParseFill(XmlReaderIterator.Node node, SVGDictionary dict, SVGStyleResolver styleResolver, SVGResolveLimit limit = SVGResolveLimit.Hierarchy, bool returnDefaultIfNull = true)
+        public static IFill ParseFill(XmlReaderIterator.Node node, SVGDictionary dict, SVGStyleResolver styles, Inheritance inheritance = Inheritance.Inherited)
         {
-            string opacityAttrib = styleResolver.Evaluate("fill-opacity", SVGResolveLimit.Hierarchy);
+            bool isDefaultFill;
+            return ParseFill(node, dict, styles, inheritance, out isDefaultFill);
+        }
+
+        public static IFill ParseFill(XmlReaderIterator.Node node, SVGDictionary dict, SVGStyleResolver styles, Inheritance inheritance, out bool isDefaultFill)
+        {
+            string opacityAttrib = styles.Evaluate("fill-opacity", inheritance);
             float opacity = (opacityAttrib != null) ? ParseFloat(opacityAttrib) : 1.0f;
-            string fillMode = styleResolver.Evaluate("fill-rule", SVGResolveLimit.Hierarchy);
+            string fillMode = styles.Evaluate("fill-rule", inheritance);
             FillMode mode = FillMode.NonZero;
             if (fillMode != null)
             {
@@ -2371,10 +2427,8 @@ namespace Unity.VectorGraphics
 
             try
             {
-                var fill = styleResolver.Evaluate("fill", limit);
-                if (fill == null && !returnDefaultIfNull)
-                    return null;
-
+                var fill = styles.Evaluate("fill", inheritance);
+                isDefaultFill = (fill == null && opacityAttrib == null);
                 return (new SVGAttribParser(fill, "fill", opacity, mode, dict)).fill;
             }
             catch (Exception e)
@@ -2383,13 +2437,13 @@ namespace Unity.VectorGraphics
             }
         }
 
-        public static Stroke ParseStrokeAndOpacity(XmlReaderIterator.Node node, SVGDictionary dict, SVGStyleResolver styleResolver, SVGResolveLimit limit = SVGResolveLimit.Hierarchy)
+        public static Stroke ParseStrokeAndOpacity(XmlReaderIterator.Node node, SVGDictionary dict, SVGStyleResolver styles, Inheritance inheritance = Inheritance.Inherited)
         {
-            string strokeAttrib = styleResolver.Evaluate("stroke", limit);
+            string strokeAttrib = styles.Evaluate("stroke", inheritance);
             if (string.IsNullOrEmpty(strokeAttrib))
                 return null; // If stroke is not specified, no other stroke properties matter
 
-            string opacityAttrib = styleResolver.Evaluate("stroke-opacity", limit);
+            string opacityAttrib = styles.Evaluate("stroke-opacity", inheritance);
             float opacity = (opacityAttrib != null) ? ParseFloat(opacityAttrib) : 1.0f;
 
             IFill strokeFill = null;
@@ -2683,7 +2737,10 @@ namespace Unity.VectorGraphics
                 return;
 
             if (attrib == "currentColor")
-                throw new NotSupportedException("currentColor is not supported as a " + attribName + " value");
+            {
+                Debug.LogError("currentColor is not supported as a " + attribName + " value");
+                return;
+            }
 
             string[] paintParts = attrib.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (allowReference)

@@ -1,3 +1,12 @@
+## [1.0.0-preview.22] - 2018-11-16
+
+### Fixed precision issues with dashed strokes
+### Fixed modifying node hierarchy while iterating through it
+### Fixed CSS data parsing
+### Clearing temp render texture when expanding edges
+### Proper support for styling in symbols
+### Fixed instancing for gradient shader
+
 ## [1.0.0-preview.21] - 2018-10-23
 
 ### Added support for borders (slices) for textured sprites

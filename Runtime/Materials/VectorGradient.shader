@@ -48,6 +48,7 @@
                 fixed4 color : COLOR;
                 float2 uv : TEXCOORD0;
                 float2 settingIndex : TEXCOORD2;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct v2f
@@ -56,6 +57,7 @@
                 float2 uv : TEXCOORD0; // uv.z is used for setting index
                 float2 settingIndex : TEXCOORD2;
                 float4 vertex : SV_POSITION;
+                UNITY_VERTEX_OUTPUT_STEREO
             };
 
             sampler2D _MainTex;
@@ -63,19 +65,23 @@
             float4 _MainTex_TexelSize;
             fixed4 _Color;
             
-            v2f vert (appdata v)
+            v2f vert (appdata IN)
             {
-                v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
+                v2f OUT;
+
+                UNITY_SETUP_INSTANCE_ID (IN);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(OUT);
+
+                OUT.vertex = UnityObjectToClipPos(IN.vertex);
                 #ifdef UNITY_COLORSPACE_GAMMA
-                o.color = v.color;
+                OUT.color = IN.color;
                 #else
-                o.color = fixed4(GammaToLinearSpace(v.color.rgb), v.color.a);
+                OUT.color = fixed4(GammaToLinearSpace(IN.color.rgb), IN.color.a);
                 #endif
-                o.color *= _RendererColor;
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-                o.settingIndex = v.settingIndex;
-                return o;
+                OUT.color *= _RendererColor;
+                OUT.uv = TRANSFORM_TEX(IN.uv, _MainTex);
+                OUT.settingIndex = IN.settingIndex;
+                return OUT;
             }
 
             float2 unpackFloat2(fixed4 c)

@@ -340,6 +340,7 @@ namespace Unity.VectorGraphics
 
                 var expandTex = RenderTexture.GetTemporary(desc);
                 RenderTexture.active = expandTex;
+                GL.Clear(false, true, Color.clear);
                 Graphics.Blit(normalTex, expandTex, s_ExpandEdgesMat, 0);
                 RenderTexture.ReleaseTemporary(normalTex);
 

@@ -126,4 +126,13 @@ public class StyleSheetTests
         Assert.AreEqual(1, props.Count);
         Assert.AreEqual("10 10", props["stroke-dasharray"]);
     }
+
+    [Test]
+    public void ParseInline_SupportsData()
+    {
+        var cssText = @"font-family: url(""data:font/woff2;base64,d09GMgABAAAAACx8AA"")";
+        var props = SVGStyleSheetUtils.ParseInline(cssText);
+        Assert.AreEqual(1, props.Count);
+        Assert.AreEqual(@"url(""data:font/woff2;base64,d09GMgABAAAAACx8AA"")", props["font-family"]);
+    }
 }

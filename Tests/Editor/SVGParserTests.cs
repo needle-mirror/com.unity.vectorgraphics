@@ -244,6 +244,47 @@ public class SVGParserTests
     }
 
     [Test]
+    public void ImportSVG_DefaultFillIsBlack()
+    {
+        string svg =
+            @"<svg xmlns=""http://www.w3.org/2000/svg"" width=""100"" height=""100"">
+                <rect x=""0"" y=""0"" width=""100"" height=""100"" />
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.Scene.Root.Children[0].Shapes[0];
+        Assert.IsNotNull(shape.Fill);
+        var fill = shape.Fill as SolidFill;
+        Assert.AreEqual(Color.black, fill.Color);
+    }
+
+    [Test]
+    public void ImportSVG_NoneFillIsNull()
+    {
+        string svg =
+            @"<svg xmlns=""http://www.w3.org/2000/svg"" width=""100"" height=""100"">
+                <rect x=""0"" y=""0"" width=""100"" height=""100"" fill=""none"" />
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.Scene.Root.Children[0].Shapes[0];
+        Assert.IsNull(shape.Fill);
+    }
+
+    [Test]
+    public void ImportSVG_NoneStrokeIsNull()
+    {
+        string svg =
+            @"<svg xmlns=""http://www.w3.org/2000/svg"" width=""100"" height=""100"">
+                <rect x=""0"" y=""0"" width=""100"" height=""100"" stroke=""none"" />
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.Scene.Root.Children[0].Shapes[0];
+        Assert.IsNull(shape.PathProps.Stroke);
+    }
+
+    [Test]
     public void ImportSVG_SupportsGroups()
     {
         string svg =
@@ -271,6 +312,27 @@ public class SVGParserTests
 
         var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
         Assert.AreEqual(0, sceneInfo.Scene.Root.Children.Count);
+    }
+
+    [Test]
+    public void PreserveViewport_ClipsInViewportSpace()
+    {
+        string svg =
+           @"<svg xmlns=""http://www.w3.org/2000/svg"" width=""100"" height=""100"" viewBox=""600 600 100 100"">
+                <rect x=""590"" y=""590"" width=""100"" height=""100"" />
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg), 0.0f, 1.0f, 0, 0, true);
+        var options = new VectorUtils.TessellationOptions()
+        {
+            StepDistance = 100.0f,
+            MaxCordDeviation = float.MaxValue,
+            MaxTanAngleDeviation = float.MaxValue,
+            SamplingStepSize = 0.01f
+        };
+        var geom = VectorUtils.TessellateScene(sceneInfo.Scene, options);
+        Assert.That(geom.Count == 1);
+        Assert.That(geom[0].Vertices.Length > 0);
     }
 
     [Test]
@@ -353,7 +415,24 @@ public class SVGParserTests
     }
 
     [Test]
-    public void ImportSVG_UseCanOverrideWithNoneFill()
+    public void ImportSVG_UseCanOverrideSymbolWithEmptyFillWithColor()
+    {
+        string svg =
+            @"<svg xmlns=""http://www.w3.org/2000/svg"" xmlns:xlink=""http://www.w3.org/1999/xlink"" width=""100"" height=""100"">
+                <defs>
+                    <rect id=""Rect"" width=""10"" height=""10"" />
+                </defs>
+                <use id=""Rect"" xlink:href=""#Rect"" fill=""black"" />
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.NodeIDs["Rect"].Shapes[0];
+        var solidFill = shape.Fill as SolidFill;
+        Assert.AreEqual(Color.black, solidFill.Color);
+    }
+
+    [Test]
+    public void ImportSVG_UseCanOverrideSymbolWithEmptyFillWithNone()
     {
         string svg =
             @"<svg xmlns=""http://www.w3.org/2000/svg"" xmlns:xlink=""http://www.w3.org/1999/xlink"" width=""100"" height=""100"">
@@ -368,23 +447,166 @@ public class SVGParserTests
         Assert.IsNull(shape.Fill);
     }
 
-    [Test]
-    public void PreserveViewport_ClipsInViewportSpace()
+    public void ImportSVG_UseCannotOverrideFillOnSymbolWitNoneFill()
     {
         string svg =
-           @"<svg xmlns=""http://www.w3.org/2000/svg"" width=""100"" height=""100"" viewBox=""600 600 100 100"">
-                <rect x=""590"" y=""590"" width=""100"" height=""100"" />
+            @"<svg xmlns=""http://www.w3.org/2000/svg"" xmlns:xlink=""http://www.w3.org/1999/xlink"" width=""100"" height=""100"">
+                <defs>
+                    <rect id=""Rect"" width=""10"" height=""10"" fill=""none"" />
+                </defs>
+                <use id=""Rect"" xlink:href=""#Rect"" fill=""red"" />
             </svg>";
 
-        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg), 0.0f, 1.0f, 0, 0, true);
-        var options = new VectorUtils.TessellationOptions() {
-            StepDistance = 100.0f,
-            MaxCordDeviation = float.MaxValue,
-            MaxTanAngleDeviation = float.MaxValue,
-            SamplingStepSize = 0.01f
-        };
-        var geom = VectorUtils.TessellateScene(sceneInfo.Scene, options);
-        Assert.That(geom.Count == 1);
-        Assert.That(geom[0].Vertices.Length > 0);
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.NodeIDs["Rect"].Shapes[0];
+        Assert.IsNull(shape.Fill);            
+    }
+
+    public void ImportSVG_UseCannotOverrideFillOnSymbolWithBlackFill()
+    {
+        string svg =
+            @"<svg xmlns=""http://www.w3.org/2000/svg"" xmlns:xlink=""http://www.w3.org/1999/xlink"" width=""100"" height=""100"">
+                <defs>
+                    <rect id=""Rect"" width=""10"" height=""10"" fill=""black"" />
+                </defs>
+                <use id=""Rect"" xlink:href=""#Rect"" fill=""red"" />
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.NodeIDs["Rect"].Shapes[0];
+        var solidFill = shape.Fill as SolidFill;
+        Assert.IsNotNull(solidFill);
+        Assert.AreEqual(Color.black, solidFill.Color);
+    }
+
+    [Test]
+    public void ImportSVG_UseCanOverrideFillWithTransparentFill()
+    {
+        string svg =
+            @"<svg xmlns=""http://www.w3.org/2000/svg"" xmlns:xlink=""http://www.w3.org/1999/xlink"" width=""100"" height=""100"">
+                <defs>
+                    <rect id=""Rect"" width=""10"" height=""10"" />
+                </defs>
+                <use id=""Rect"" xlink:href=""#Rect"" fill-opacity=""0"" />
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.NodeIDs["Rect"].Shapes[0];
+        var solidFill = shape.Fill as SolidFill;
+        Assert.IsNotNull(solidFill);
+        Assert.AreEqual(new Color(0,0,0,0), solidFill.Color);
+    }
+
+    [Test]
+    public void ImportSVG_UseCanOverrideSymbolStroke()
+    {
+        string svg =
+            @"<svg xmlns=""http://www.w3.org/2000/svg"" xmlns:xlink=""http://www.w3.org/1999/xlink"" width=""100"" height=""100"">
+                <defs>
+                    <rect id=""Rect"" width=""10"" height=""10"" fill=""red"" />
+                </defs>
+                <use id=""Rect"" xlink:href=""#Rect"" stroke=""black"" />
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.NodeIDs["Rect"].Shapes[0];
+        Assert.IsNotNull(shape.PathProps.Stroke);
+        Assert.AreEqual(Color.black, shape.PathProps.Stroke.Color);
+    }
+
+    [Test]
+    public void ImportSVG_UseCannotOverrideSymbolStrokeWhenDefined()
+    {
+        string svg =
+            @"<svg xmlns=""http://www.w3.org/2000/svg"" xmlns:xlink=""http://www.w3.org/1999/xlink"" width=""100"" height=""100"">
+                <defs>
+                    <rect id=""Rect"" width=""10"" height=""10"" fill=""red"" stroke=""black"" />
+                </defs>
+                <use id=""Rect"" xlink:href=""#Rect"" stroke=""red"" />
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.NodeIDs["Rect"].Shapes[0];
+        Assert.IsNotNull(shape.PathProps.Stroke);
+        Assert.AreEqual(Color.black, shape.PathProps.Stroke.Color);
+    }
+
+    [Test]
+    public void ImportSVG_UseCanOverrideSymbolStrokeWidth()
+    {
+        string svg =
+            @"<svg xmlns=""http://www.w3.org/2000/svg"" xmlns:xlink=""http://www.w3.org/1999/xlink"" width=""100"" height=""100"">
+                <defs>
+                    <rect id=""Rect"" width=""10"" height=""10"" fill=""red"" stroke=""black"" />
+                </defs>
+                <use id=""Rect"" xlink:href=""#Rect"" stroke-width=""2"" />
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.NodeIDs["Rect"].Shapes[0];
+        Assert.IsNotNull(shape.PathProps.Stroke);
+        Assert.AreEqual(Color.black, shape.PathProps.Stroke.Color);
+        Assert.AreEqual(1.0f, shape.PathProps.Stroke.HalfThickness);
+    }
+
+    [Test]
+    public void ImportSVG_UseCannotOverrideSymbolStrokeWidthWhenDefined()
+    {
+        string svg =
+            @"<svg xmlns=""http://www.w3.org/2000/svg"" xmlns:xlink=""http://www.w3.org/1999/xlink"" width=""100"" height=""100"">
+                <defs>
+                    <rect id=""Rect"" width=""10"" height=""10"" fill=""red"" stroke=""black"" stroke-width=""2"" />
+                </defs>
+                <use id=""Rect"" xlink:href=""#Rect"" stroke-width=""1"" />
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.NodeIDs["Rect"].Shapes[0];
+        Assert.IsNotNull(shape.PathProps.Stroke);
+        Assert.AreEqual(Color.black, shape.PathProps.Stroke.Color);
+        Assert.AreEqual(1.0f, shape.PathProps.Stroke.HalfThickness);
+    }
+
+    [Test]
+    public void ImportSVG_UseCanReferenceElementDefinedLater()
+    {
+        string svg =
+            @"<svg xmlns=""http://www.w3.org/2000/svg"" xmlns:xlink=""http://www.w3.org/1999/xlink"" width=""100"" height=""100"">
+                <use id=""Rect"" xlink:href=""#Symbol"" stroke=""black"" />
+                <symbol id=""Symbol"">
+                    <rect width=""10"" height=""10"" fill=""red"" />
+                </symbol>
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.NodeIDs["Rect"].Children[0].Shapes[0];
+        var solidFill = shape.Fill as SolidFill;
+        Assert.IsNotNull(solidFill);
+        Assert.AreEqual(Color.red, solidFill.Color);
+        Assert.IsNotNull(shape.PathProps.Stroke);
+        Assert.AreEqual(Color.black, shape.PathProps.Stroke.Color);
+    }
+
+    [Test]
+    public void ImportSVG_SymbolCanReferenceAnotherSymbolDefinedLater()
+    {
+        string svg =
+            @"<svg xmlns=""http://www.w3.org/2000/svg"" xmlns:xlink=""http://www.w3.org/1999/xlink"" width=""100"" height=""100"">
+                <symbol id=""Symbol1"">
+                    <use xlink:href=""#Symbol2"" />
+                </symbol>
+                <symbol id=""Symbol2"">
+                    <rect width=""10"" height=""10"" fill=""red"" />
+                </symbol>
+                <use id=""Rect"" xlink:href=""#Symbol1"" stroke=""black"" />
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.NodeIDs["Rect"].Children[0].Children[0].Children[0].Shapes[0];
+        var solidFill = shape.Fill as SolidFill;
+        Assert.IsNotNull(solidFill);
+        Assert.AreEqual(Color.red, solidFill.Color);
+        Assert.IsNotNull(shape.PathProps.Stroke);
+        Assert.AreEqual(Color.black, shape.PathProps.Stroke.Color);
     }
 }

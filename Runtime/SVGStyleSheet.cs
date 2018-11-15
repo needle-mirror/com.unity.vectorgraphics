@@ -167,9 +167,36 @@ namespace Unity.VectorGraphics
 
             value = "";
             while (PeekToken(tokens) != "" && PeekToken(tokens) != ";" && PeekToken(tokens) != "}")
+            {
                 value = (value == "") ? PopToken(tokens) : value + " " + PopToken(tokens);
+                if (PeekToken(tokens) == "(")
+                    value += ParseParenValue(tokens);
+            }
 
             return true;
+        }
+
+        private static string ParseParenValue(List<string> tokens)
+        {
+            var opening = PopToken(tokens);
+            if (opening != "(")
+            {
+                Debug.LogError("Invaid CSS value opening");
+                return "";
+            }
+
+            var value = opening;
+            while (PeekToken(tokens) != "" && PeekToken(tokens) != ")")
+                value += PopToken(tokens);
+            
+            if (PeekToken(tokens) != ")")
+            {
+                Debug.LogError("Invaid CSS value closing");
+                return "";
+            }
+
+            value += PopToken(tokens);
+            return value;
         }
 
         /// <summary>Breaks a CSS input into tokens</summary>
@@ -231,7 +258,7 @@ namespace Unity.VectorGraphics
 
         private static bool IsSeparator(char ch)
         {
-            return IsWhitespace(ch) || ch == ';' || ch == ':' || ch == '{' || ch == '}' || ch == ',';
+            return IsWhitespace(ch) || ch == ';' || ch == ':' || ch == '{' || ch == '}' || ch == '(' || ch == ')' || ch == ',';
         }
 
         private static bool IsWhitespace(char ch)
