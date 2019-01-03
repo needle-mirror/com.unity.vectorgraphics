@@ -247,7 +247,7 @@ namespace Unity.VectorGraphics
             // Approximation adapted from http://spencermortensen.com/articles/bezier-circle/
             float s = Mathf.Sin(sweepAngleRads);
             float c = Mathf.Cos(sweepAngleRads);
-            Matrix2D m = Matrix2D.Rotate(startAngleRads);
+            Matrix2D m = Matrix2D.RotateLH(startAngleRads);
             m.m02 = center.x;
             m.m12 = center.y;
             float f = 0.551915024494f;
@@ -618,7 +618,7 @@ namespace Unity.VectorGraphics
         /// <returns>The transformed curve segment</returns>
         public static BezierSegment TransformSegment(BezierSegment segment, Vector2 translation, float rotation, Vector2 scaling)
         {
-            var m = Matrix2D.Rotate(rotation);
+            var m = Matrix2D.RotateLH(rotation);
             var newSeg = new BezierSegment() {
                 P0 = m * Vector2.Scale(segment.P0, scaling) + translation,
                 P1 = m * Vector2.Scale(segment.P1, scaling) + translation,
@@ -649,7 +649,7 @@ namespace Unity.VectorGraphics
         /// <returns>The transformed path</returns>
         public static BezierPathSegment[] TransformBezierPath(BezierPathSegment[] path, Vector2 translation, float rotation, Vector2 scaling)
         {
-            var m = Matrix2D.Rotate(rotation);
+            var m = Matrix2D.RotateLH(rotation);
             var newPath = new BezierPathSegment[path.Length];
             for (int i = 0; i < newPath.Length; ++i)
             {

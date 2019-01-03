@@ -1,3 +1,9 @@
+## [1.0.0-preview.23] - 2019-01-04
+
+### Added support for gradient fills defined later in the file
+### Fixed invalid SVG pen position when 'z' command occurs after 'm'
+### Deprecating Matrix2D.Rotate in favor of RotateRH and RotateLH
+
 ## [1.0.0-preview.22] - 2018-11-16
 
 ### Fixed precision issues with dashed strokes

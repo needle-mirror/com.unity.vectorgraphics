@@ -605,7 +605,7 @@ namespace Unity.VectorGraphics
                 for (int i = 0; i <= arcSegments; i++)
                 {
                     float angle = sweepAngle * (i / (float)arcSegments);
-                    Vector2 nrm = Matrix2D.Rotate(angle) * joinInfo.NormAtEnd;
+                    Vector2 nrm = Matrix2D.RotateLH(angle) * joinInfo.NormAtEnd;
                     if (flipArc) nrm = -nrm;
                     verts.Add(nrm * halfThickness + joinInfo.JoinPos);
 
@@ -712,7 +712,7 @@ namespace Unity.VectorGraphics
                     for (int i = 1; i < arcSegments; i++)
                     {
                         float angle = Mathf.PI * (i / (float)arcSegments);
-                        verts.Add(pos + Matrix2D.Rotate(angle) * nrm * halfThickness * arcSign);
+                        verts.Add(pos + Matrix2D.RotateLH(angle) * nrm * halfThickness * arcSign);
                     }
 
                     if (atStart)

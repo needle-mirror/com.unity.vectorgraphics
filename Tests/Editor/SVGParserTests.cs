@@ -609,4 +609,25 @@ public class SVGParserTests
         Assert.IsNotNull(shape.PathProps.Stroke);
         Assert.AreEqual(Color.black, shape.PathProps.Stroke.Color);
     }
+
+    [Test]
+    public void ImportSVG_CanReferenceFillsDefinedLater()
+    {
+        string svg =
+            @"<svg width=""54px"" height=""54px"" version=""1.1"" xmlns=""http://www.w3.org/2000/svg"" xmlns:xlink=""http://www.w3.org/1999/xlink"" xml:space=""preserve"" xmlns:serif=""http://www.serif.com/"" style=""fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:1.41421;"">
+                <path id=""GradientHill"" d=""M0.012,26.717c0,-14.743 11.97,-26.713 26.714,-26.713c14.743,0 26.713,11.97 26.713,26.713c0,14.743 -11.97,26.713 -26.713,26.713c-14.744,0 -26.714,-11.97 -26.714,-26.713Z"" style=""fill:url(#_Linear1);""/>
+                <defs>
+                    <linearGradient id=""_Linear1"" x1=""0"" y1=""0"" x2=""1"" y2=""0"" gradientUnits=""userSpaceOnUse"" gradientTransform=""matrix(3.2714e-15,-53.4261,53.4261,3.2714e-15,26.7255,53.43)"">
+                    <stop offset=""0"" style=""stop-color:#9d9d9d;stop-opacity:1""/>
+                    <stop offset=""0.47"" style=""stop-color:#e9e9e9;stop-opacity:1""/>
+                    <stop offset=""1"" style=""stop-color:#fff;stop-opacity:1""/>
+                    </linearGradient>
+                </defs>
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.NodeIDs["GradientHill"].Shapes[0];
+        Assert.IsNotNull(shape.Fill);
+        Assert.IsNotNull(shape.Fill as GradientFill);
+    }
 }

@@ -281,8 +281,8 @@ namespace Unity.VectorGraphics
             var tess = new Tess();
 
             var angle = 45.0f * Mathf.Deg2Rad;
-            var mat = Matrix2D.Rotate(angle);
-            var invMat = Matrix2D.Rotate(-angle);
+            var mat = Matrix2D.RotateLH(angle);
+            var invMat = Matrix2D.RotateLH(-angle);
 
             foreach (var c in vectorShape.Contours)
             {

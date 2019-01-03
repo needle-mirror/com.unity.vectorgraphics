@@ -195,6 +195,7 @@ namespace Unity.VectorGraphics
     }
 
     internal class SVGDictionary : Dictionary<string, object> {}
+    internal class SVGPostponedFills : Dictionary<IFill, string> { }
 
     internal class SVGDocument
     {
@@ -298,7 +299,7 @@ namespace Unity.VectorGraphics
             ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
-            var fill = SVGAttribParser.ParseFill(node, svgObjects, styles);
+            var fill = SVGAttribParser.ParseFill(node, svgObjects, postponedFills, styles);
             PathCorner strokeCorner;
             PathEnding strokeEnding;
             var stroke = ParseStrokeAttributeSet(node, out strokeCorner, out strokeEnding);
@@ -347,7 +348,7 @@ namespace Unity.VectorGraphics
             ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
-            var fill = SVGAttribParser.ParseFill(node, svgObjects, styles);
+            var fill = SVGAttribParser.ParseFill(node, svgObjects, postponedFills, styles);
             PathCorner strokeCorner;
             PathEnding strokeEnding;
             var stroke = ParseStrokeAttributeSet(node, out strokeCorner, out strokeEnding);
@@ -573,7 +574,7 @@ namespace Unity.VectorGraphics
             ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
-            var fill = SVGAttribParser.ParseFill(node, svgObjects, styles);
+            var fill = SVGAttribParser.ParseFill(node, svgObjects, postponedFills, styles);
             PathCorner strokeCorner;
             PathEnding strokeEnding;
             var stroke = ParseStrokeAttributeSet(node, out strokeCorner, out strokeEnding);
@@ -605,7 +606,7 @@ namespace Unity.VectorGraphics
             ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
-            var fill = SVGAttribParser.ParseFill(node, svgObjects, styles);
+            var fill = SVGAttribParser.ParseFill(node, svgObjects, postponedFills, styles);
             PathCorner strokeCorner;
             PathEnding strokeEnding;
             var stroke = ParseStrokeAttributeSet(node, out strokeCorner, out strokeEnding);
@@ -656,7 +657,7 @@ namespace Unity.VectorGraphics
             ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
-            var fill = SVGAttribParser.ParseFill(node, svgObjects, styles);
+            var fill = SVGAttribParser.ParseFill(node, svgObjects, postponedFills, styles);
             PathCorner strokeCorner;
             PathEnding strokeEnding;
             var stroke = ParseStrokeAttributeSet(node, out strokeCorner, out strokeEnding);
@@ -952,7 +953,7 @@ namespace Unity.VectorGraphics
             ParseID(node, sceneNode);
             ParseOpacity(sceneNode);
             sceneNode.Transform = SVGAttribParser.ParseTransform(node);
-            var fill = SVGAttribParser.ParseFill(node, svgObjects, styles);
+            var fill = SVGAttribParser.ParseFill(node, svgObjects, postponedFills, styles);
             PathCorner strokeCorner;
             PathEnding strokeEnding;
             var stroke = ParseStrokeAttributeSet(node, out strokeCorner, out strokeEnding);
@@ -1214,7 +1215,7 @@ namespace Unity.VectorGraphics
                     styles.PushLayer(layer);
 
                 bool isDefaultFill;
-                var fill = SVGAttribParser.ParseFill(null, svgObjects, styles, Inheritance.Inherited, out isDefaultFill);
+                var fill = SVGAttribParser.ParseFill(null, svgObjects, postponedFills, styles, Inheritance.Inherited, out isDefaultFill);
                 PathCorner strokeCorner;
                 PathEnding strokeEnding;
                 var stroke = ParseStrokeAttributeSet(null, out strokeCorner, out strokeEnding);
@@ -1831,6 +1832,18 @@ namespace Unity.VectorGraphics
                     continue;
                 foreach (var shape in nodeInfo.Node.Shapes)
                 {
+                    if (shape.Fill != null)
+                    {
+                        // This fill may be a placeholder for postponed reference, try to resolve it here.
+                        string reference;
+                        if (postponedFills.TryGetValue(shape.Fill, out reference))
+                        {
+                            var fill = SVGAttribParser.ParseRelativeRef(reference, svgObjects) as IFill;
+                            if (fill != null)
+                                shape.Fill = fill;
+                        }
+                    }
+
                     if (shape.Fill is GradientFill)
                     {
                         AdjustGradientFill(nodeInfo.Node, nodeInfo.WorldTransform, shape);
@@ -1904,7 +1917,7 @@ namespace Unity.VectorGraphics
                 var gradientVector = lineEnd - lineStart;
                 float gradientVectorInvLength = 1.0f / gradientVector.magnitude;
                 var scale = Matrix2D.Scale(new Vector2(bounds.width * gradientVectorInvLength, bounds.height * gradientVectorInvLength));
-                var rotation = Matrix2D.Rotate(Mathf.Atan2(gradientVector.y, gradientVector.x));
+                var rotation = Matrix2D.RotateLH(Mathf.Atan2(gradientVector.y, gradientVector.x));
                 var offset = Matrix2D.Translate(-lineStart);
                 gradTransform = scale * rotation * offset;
             }
@@ -2105,6 +2118,7 @@ namespace Unity.VectorGraphics
         Dictionary<SceneNode, PatternData> patternData = new Dictionary<SceneNode, PatternData>();
         Dictionary<SceneNode, MaskData> maskData = new Dictionary<SceneNode, MaskData>();
         Dictionary<string, List<NodeReferenceData>> postponedSymbolData = new Dictionary<string, List<NodeReferenceData>>();
+        SVGPostponedFills postponedFills = new SVGPostponedFills();
         List<NodeWithParent> invisibleNodes = new List<NodeWithParent>();
         Stack<Vector2> currentContainerSize = new Stack<Vector2>();
         Stack<Vector2> currentViewBoxSize = new Stack<Vector2>();
@@ -2404,13 +2418,13 @@ namespace Unity.VectorGraphics
             }
         }
 
-        public static IFill ParseFill(XmlReaderIterator.Node node, SVGDictionary dict, SVGStyleResolver styles, Inheritance inheritance = Inheritance.Inherited)
+        public static IFill ParseFill(XmlReaderIterator.Node node, SVGDictionary dict, SVGPostponedFills postponedFills, SVGStyleResolver styles, Inheritance inheritance = Inheritance.Inherited)
         {
             bool isDefaultFill;
-            return ParseFill(node, dict, styles, inheritance, out isDefaultFill);
+            return ParseFill(node, dict, postponedFills, styles, inheritance, out isDefaultFill);
         }
 
-        public static IFill ParseFill(XmlReaderIterator.Node node, SVGDictionary dict, SVGStyleResolver styles, Inheritance inheritance, out bool isDefaultFill)
+        public static IFill ParseFill(XmlReaderIterator.Node node, SVGDictionary dict, SVGPostponedFills postponedFills, SVGStyleResolver styles, Inheritance inheritance, out bool isDefaultFill)
         {
             string opacityAttrib = styles.Evaluate("fill-opacity", inheritance);
             float opacity = (opacityAttrib != null) ? ParseFloat(opacityAttrib) : 1.0f;
@@ -2429,7 +2443,7 @@ namespace Unity.VectorGraphics
             {
                 var fill = styles.Evaluate("fill", inheritance);
                 isDefaultFill = (fill == null && opacityAttrib == null);
-                return (new SVGAttribParser(fill, "fill", opacity, mode, dict)).fill;
+                return (new SVGAttribParser(fill, "fill", opacity, mode, dict, postponedFills)).fill;
             }
             catch (Exception e)
             {
@@ -2449,7 +2463,7 @@ namespace Unity.VectorGraphics
             IFill strokeFill = null;
             try
             {
-                strokeFill = (new SVGAttribParser(strokeAttrib, "stroke", opacity, FillMode.NonZero, dict)).fill;
+                strokeFill = (new SVGAttribParser(strokeAttrib, "stroke", opacity, FillMode.NonZero, dict, null)).fill;
             }
             catch (Exception e)
             {
@@ -2547,7 +2561,8 @@ namespace Unity.VectorGraphics
                 }
                 else if (cmdNoCase == 'z') // ClosePath
                 {
-                    penPos = currentContour.First != null ? currentContour.First.Value.P0 : Vector2.zero;
+                    if (currentContour.First != null)
+                        penPos = currentContour.First.Value.P0;
                     ConcludePath(true);
                 }
                 else if (cmdNoCase == 'l') // Line-to
@@ -2702,7 +2717,7 @@ namespace Unity.VectorGraphics
                         cx = NextFloat();
                         cy = NextFloat();
                     }
-                    transform *= Matrix2D.Translate(new Vector2(-cx, -cy)) * Matrix2D.Rotate(-a) * Matrix2D.Translate(new Vector2(cx, cy));
+                    transform *= Matrix2D.Translate(new Vector2(-cx, -cy)) * Matrix2D.RotateLH(-a) * Matrix2D.Translate(new Vector2(cx, cy));
                 }
                 else if ((trasformCommand == "skewX") || (trasformCommand == "skewY"))
                 {
@@ -2719,7 +2734,7 @@ namespace Unity.VectorGraphics
             }
         }
 
-        SVGAttribParser(string attrib, string attribName, float opacity, FillMode mode, SVGDictionary dict, bool allowReference = true)
+        SVGAttribParser(string attrib, string attribName, float opacity, FillMode mode, SVGDictionary dict, SVGPostponedFills postponedFills, bool allowReference = true)
         {
             this.attribName = attribName;
             if (string.IsNullOrEmpty(attrib))
@@ -2752,8 +2767,16 @@ namespace Unity.VectorGraphics
                     if (fill == null)
                     {
                         if (paintParts.Length > 1)
-                            fill = (new SVGAttribParser(paintParts[1], attribName, opacity, mode, dict, false)).fill;
-                        else Debug.LogWarning("Referencing non-existent paint (" + reference + ")");
+                        {
+                            fill = (new SVGAttribParser(paintParts[1], attribName, opacity, mode, dict, postponedFills, false)).fill;
+                        }
+                        else if (postponedFills != null)
+                        {
+                            // The reference doesn't exist, but may be defined later in the file.
+                            // Make a dummy fill to be replaced later.
+                            fill = new SolidFill() { Color = Color.clear };
+                            postponedFills[fill] = reference;
+                        }
                     }
 
                     if (fill != null)
