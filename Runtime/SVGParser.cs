@@ -621,25 +621,34 @@ namespace Unity.VectorGraphics
                     throw node.GetException("polygon 'points' do not even specify one triangle");
 
                 var pathProps = new PathProperties() { Stroke = stroke, Head = strokeEnding, Tail = strokeEnding };
-                var contour = new BezierContour() { Segments = new BezierPathSegment[pointsString.Length / 2], Closed = true };
+                var contour = new BezierContour() { Closed = true };
                 var lastPoint = new Vector2(
                         AttribLengthVal(pointsString[0], node, "points", 0.0f, DimType.Width),
                         AttribLengthVal(pointsString[1], node, "points", 0.0f, DimType.Height));
-                for (int i = 1; i < contour.Segments.Length; i++)
+                int maxSegments = pointsString.Length / 2;
+                var segments = new List<BezierPathSegment>(maxSegments);
+                for (int i = 1; i < maxSegments; i++)
                 {
                     var newPoint = new Vector2(
                             AttribLengthVal(pointsString[i * 2 + 0], node, "points", 0.0f, DimType.Width),
                             AttribLengthVal(pointsString[i * 2 + 1], node, "points", 0.0f, DimType.Height));
+                    if (newPoint == lastPoint)
+                        continue;
                     var seg = VectorUtils.MakeLine(lastPoint, newPoint);
-                    contour.Segments[i - 1] = new BezierPathSegment() { P0 = seg.P0, P1 = seg.P1, P2 = seg.P2 };
+                    segments.Add(new BezierPathSegment() { P0 = seg.P0, P1 = seg.P1, P2 = seg.P2 });
                     lastPoint = newPoint;
                 }
-                var connect = VectorUtils.MakeLine(lastPoint, contour.Segments[0].P0);
-                contour.Segments[contour.Segments.Length - 1] = new BezierPathSegment() { P0 = connect.P0, P1 = connect.P1, P2 = connect.P2 };
 
-                var shape = new Shape() { Contours = new BezierContour[] { contour }, PathProps = pathProps, Fill = fill };
-                sceneNode.Shapes = new List<Shape>(1);
-                sceneNode.Shapes.Add(shape);
+                if (segments.Count > 0)
+                {
+                    var connect = VectorUtils.MakeLine(lastPoint, segments[0].P0);
+                    segments.Add(new BezierPathSegment() { P0 = connect.P0, P1 = connect.P1, P2 = connect.P2 });
+                    contour.Segments = segments.ToArray();
+
+                    var shape = new Shape() { Contours = new BezierContour[] { contour }, PathProps = pathProps, Fill = fill };
+                    sceneNode.Shapes = new List<Shape>(1);
+                    sceneNode.Shapes.Add(shape);
+                }
             }
 
             ParseClipAndMask(node, sceneNode);
@@ -673,25 +682,32 @@ namespace Unity.VectorGraphics
 
                 var shape = new Shape() { Fill = fill };
                 shape.PathProps = new PathProperties() { Stroke = stroke, Corners = strokeCorner, Head = strokeEnding, Tail = strokeEnding };
-                shape.Contours = new BezierContour[] {
-                     new BezierContour() { Segments = new BezierPathSegment[pointsString.Length / 2] }
-                };
                 var lastPoint = new Vector2(
                         AttribLengthVal(pointsString[0], node, "points", 0.0f, DimType.Width),
                         AttribLengthVal(pointsString[1], node, "points", 0.0f, DimType.Height));
-                for (int i = 1; i < shape.Contours[0].Segments.Length; i++)
+                int maxSegments = pointsString.Length / 2;
+                var segments = new List<BezierPathSegment>(maxSegments);
+                for (int i = 1; i < maxSegments; i++)
                 {
                     var newPoint = new Vector2(
                             AttribLengthVal(pointsString[i * 2 + 0], node, "points", 0.0f, DimType.Width),
                             AttribLengthVal(pointsString[i * 2 + 1], node, "points", 0.0f, DimType.Height));
+                    if (newPoint == lastPoint)
+                        continue;
                     var seg = VectorUtils.MakeLine(lastPoint, newPoint);
-                    shape.Contours[0].Segments[i - 1] = new BezierPathSegment() { P0 = seg.P0, P1 = seg.P1, P2 = seg.P2 };
+                    segments.Add(new BezierPathSegment() { P0 = seg.P0, P1 = seg.P1, P2 = seg.P2 });
                     lastPoint = newPoint;
                 }
-                var connect = VectorUtils.MakeLine(lastPoint, shape.Contours[0].Segments[0].P0);
-                shape.Contours[0].Segments[shape.Contours[0].Segments.Length - 1] = new BezierPathSegment() { P0 = connect.P0, P1 = connect.P1, P2 = connect.P2 };
-                sceneNode.Shapes = new List<Shape>(1);
-                sceneNode.Shapes.Add(shape);
+                if (segments.Count > 0 )
+                {
+                    var connect = VectorUtils.MakeLine(lastPoint, segments[0].P0);
+                    segments.Add(new BezierPathSegment() { P0 = connect.P0, P1 = connect.P1, P2 = connect.P2 });
+                    shape.Contours = new BezierContour[] {
+                         new BezierContour() { Segments = segments.ToArray() }
+                    };
+                    sceneNode.Shapes = new List<Shape>(1);
+                    sceneNode.Shapes.Add(shape);
+                }
             }
 
             ParseClipAndMask(node, sceneNode);

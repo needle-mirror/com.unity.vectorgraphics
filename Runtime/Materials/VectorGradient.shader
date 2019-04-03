@@ -78,7 +78,7 @@
                 #else
                 OUT.color = fixed4(GammaToLinearSpace(IN.color.rgb), IN.color.a);
                 #endif
-                OUT.color *= _RendererColor;
+                OUT.color *= _Color * _RendererColor;
                 OUT.uv = TRANSFORM_TEX(IN.uv, _MainTex);
                 OUT.settingIndex = IN.settingIndex;
                 return OUT;

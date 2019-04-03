@@ -630,4 +630,20 @@ public class SVGParserTests
         Assert.IsNotNull(shape.Fill);
         Assert.IsNotNull(shape.Fill as GradientFill);
     }
+
+    [Test, Description("Case 1136667")]
+    public void ImportSVG_PolygonSkipsDuplicatedPoints()
+    {
+        string svg =
+            @"<svg xmlns=""http://www.w3.org/2000/svg"" xmlns:xlink=""http://www.w3.org/1999/xlink"" viewBox=""0 0 216 216"">
+                <g>
+                    <polygon id=""Poly1"" points=""143.781 45.703 72.401 45.703 36.711 107.52 72.401 169.337 143.781 169.337 179.471 107.52 143.781 45.703 143.781 45.703""/>
+                </g>
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.NodeIDs["Poly1"].Shapes[0];
+        Assert.AreEqual(1, shape.Contours.Length);
+        Assert.AreEqual(7, shape.Contours[0].Segments.Length);
+    }
 }

@@ -1,3 +1,9 @@
+## [1.0.0-preview.24] - 2019-04-04
+
+### Applying material's color in VectorGradient.shader
+### Fixed duplicated points causing issues with polygons
+### Added repository information to package.json
+
 ## [1.0.0-preview.23] - 2019-01-04
 
 ### Added support for gradient fills defined later in the file
