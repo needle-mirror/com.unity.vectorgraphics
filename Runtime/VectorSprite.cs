@@ -375,7 +375,7 @@ namespace Unity.VectorGraphics
             return copy;
         }
 
-        private static Vector2 GetPivot(Alignment alignment, Vector2 customPivot, Rect bbox, bool flipYAxis)
+        internal static Vector2 GetPivot(Alignment alignment, Vector2 customPivot, Rect bbox, bool flipYAxis)
         {
             switch (alignment)
             {

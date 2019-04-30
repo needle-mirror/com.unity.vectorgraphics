@@ -646,4 +646,17 @@ public class SVGParserTests
         Assert.AreEqual(1, shape.Contours.Length);
         Assert.AreEqual(7, shape.Contours[0].Segments.Length);
     }
+
+    [Test, Description("Jira issue SECURITY-505")]
+    public void ImportSVG_ImageDoesNotSupportFileURLScheme()
+    {
+        string svg =
+            @"<svg xmlns=""http://www.w3.org/2000/svg"" xmlns:xlink=""http://www.w3.org/1999/xlink"" width=""200"" height=""200"">
+                <image id=""Image0"" xlink:href=""file://192.168.0.1/image.png"" width=""200"" height=""200"" />
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        SceneNode node;
+        Assert.IsFalse(sceneInfo.NodeIDs.TryGetValue("Image0", out node));
+    }
 }

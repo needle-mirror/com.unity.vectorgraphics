@@ -402,26 +402,37 @@ namespace Unity.VectorGraphics
                 textureFill.Mode = FillMode.NonZero;
                 textureFill.Addressing = AddressMode.Clamp;
 
-                if (url.StartsWith("data:"))
+                var lowercaseURL = url.ToLower();
+                if (lowercaseURL.StartsWith("data:"))
                 {
                     textureFill.Texture = DecodeTextureData(url);
                 }
                 else
                 {
-                    if (!url.Contains("://"))
-                        url = "file://Assets/" + url;
-
-                    #pragma warning disable 618
-                    // WWW is obsolete (replaced with UnityWebRequest), but this is the class that works best
-                    // with editor code. We will continue to use WWW until UnityWebRequest works better in an editor
-                    // environment.
-                    using (WWW www = new WWW(url))
+                    if (!lowercaseURL.Contains("://"))
                     {
-                        while (www.keepWaiting)
-                            System.Threading.Thread.Sleep(10); // Progress bar please...
-                        textureFill.Texture = www.texture;
+                        #if UNITY_EDITOR
+                        textureFill.Texture = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/" + url);
+                        #endif
                     }
-                    #pragma warning restore 618
+                    else if (lowercaseURL.StartsWith("http://") || lowercaseURL.StartsWith("https://"))
+                    {
+                        #pragma warning disable 618
+                        // WWW is obsolete (replaced with UnityWebRequest), but this is the class that works best
+                        // with editor code. We will continue to use WWW until UnityWebRequest works better in an editor
+                        // environment.
+                        using (WWW www = new WWW(url))
+                        {
+                            while (www.keepWaiting)
+                                System.Threading.Thread.Sleep(10); // Progress bar please...
+                            textureFill.Texture = www.texture;
+                        }
+                        #pragma warning restore 618
+                    }
+                    else
+                    {
+                        Debug.LogWarning("Unsupported URL scheme for <image> (only http/https is supported): " + url);
+                    }
                 }
 
                 if (textureFill.Texture != null)
@@ -2733,7 +2744,7 @@ namespace Unity.VectorGraphics
                         cx = NextFloat();
                         cy = NextFloat();
                     }
-                    transform *= Matrix2D.Translate(new Vector2(-cx, -cy)) * Matrix2D.RotateLH(-a) * Matrix2D.Translate(new Vector2(cx, cy));
+                    transform *= Matrix2D.Translate(new Vector2(cx, cy)) * Matrix2D.RotateLH(-a) * Matrix2D.Translate(new Vector2(-cx, -cy));
                 }
                 else if ((trasformCommand == "skewX") || (trasformCommand == "skewY"))
                 {

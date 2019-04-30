@@ -396,6 +396,19 @@ namespace Unity.VectorGraphics
             return atlas;
         }
 
+        private static int NextPOT(int v)
+        {
+            if (v <= 0)
+                return 0;
+            --v;
+            v |= v >> 1;
+            v |= v >> 2;
+            v |= v >> 4;
+            v |= v >> 8;
+            v |= v >> 16;
+            return ++v;
+        }
+
         /// <summary>Generates a Texture2D atlas containing the textures and gradients for the vector geometry.</summary>
         /// <param name="geoms">The list of Geometry objects, probably created with TessellateNodeHierarchy</param>
         /// <param name="rasterSize">Maximum size of the generated texture</param>
@@ -451,14 +464,13 @@ namespace Unity.VectorGraphics
             int minWidth = (maxSettingIndex+1) * 3;
             atlasSize.x = Math.Max(minWidth, (int)atlasSize.x);
 
-            int atlasWidth = (int)atlasSize.x;
-            int atlasHeight = (int)atlasSize.y;
+            int atlasWidth = NextPOT((int)atlasSize.x);
+            int atlasHeight = NextPOT((int)atlasSize.y);
             var atlasColors = new Color32[atlasWidth * atlasHeight];
             for (int k = 0; k < atlasWidth * atlasHeight; ++k)
                 atlasColors[k] = Color.black;
             Vector2 atlasInvSize = new Vector2(1.0f / (float)atlasWidth, 1.0f / (float)atlasHeight);
             Vector2 whiteTexelsScreenPos = pack[pack.Count - 1].Position;
-            Vector2 whiteTexelsPos = (whiteTexelsScreenPos + Vector2.one) * atlasInvSize;
 
             int i = 0;
             RawTexture rawAtlasTex = new RawTexture() { Rgba = atlasColors, Width = atlasWidth, Height = atlasHeight };
@@ -475,8 +487,9 @@ namespace Unity.VectorGraphics
             BlitRawTexture(whiteTex, rawAtlasTex, (int)whiteTexelsScreenPos.x, (int)whiteTexelsScreenPos.y, false);
 
             // Setting 0 is reserved for the white texel
-            WriteRawInt2Packed(rawAtlasTex, (int)whiteTexelsScreenPos.x, (int)whiteTexelsScreenPos.y, 0, 0);
-            WriteRawInt2Packed(rawAtlasTex, (int)whiteTexelsScreenPos.x, (int)whiteTexelsScreenPos.y, 1, 0);
+            WriteRawFloat4Packed(rawAtlasTex, 0.0f, 0.0f, 0.0f, 0.0f, 0, 0);
+            WriteRawInt2Packed(rawAtlasTex, (int)whiteTexelsScreenPos.x+1, (int)whiteTexelsScreenPos.y+1, 1, 0);
+            WriteRawInt2Packed(rawAtlasTex, 0, 0, 2, 0);
 
             var writtenSettings = new HashSet<int>();
             writtenSettings.Add(0);
@@ -516,12 +529,6 @@ namespace Unity.VectorGraphics
                     var size = new Vector2(entry.Texture.Width-1, entry.Texture.Height-1);
                     WriteRawInt2Packed(rawAtlasTex, (int)pos.x, (int)pos.y, destX++, 0);
                     WriteRawInt2Packed(rawAtlasTex, (int)size.x, (int)size.y, destX++, 0);
-                }
-                else
-                {
-                    g.UVs = new Vector2[vertsCount];
-                    for (i = 0; i < vertsCount; i++)
-                        g.UVs[i] = whiteTexelsPos;
                 }
             }
 

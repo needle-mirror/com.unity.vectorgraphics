@@ -323,8 +323,10 @@ namespace Unity.VectorGraphics.Editor
                 sprite.texture.name = name + "Atlas";
 
             var tex = BuildTexture(sprite, name);
+            var rect = new Rect(0, 0, tex.width, tex.height);
+            var pivot = VectorUtils.GetPivot(Alignment, CustomPivot, rect, false);
 
-            var texturedSprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), CustomPivot, SvgPixelsPerUnit, 0, TexturedSpriteMeshType, m_SpriteData.SpriteRect.border);
+            var texturedSprite = Sprite.Create(tex, rect, pivot, SvgPixelsPerUnit, 0, TexturedSpriteMeshType, m_SpriteData.SpriteRect.border);
             texturedSprite.name = name;
 
             m_ImportingSprite = texturedSprite;

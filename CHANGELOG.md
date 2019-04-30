@@ -1,3 +1,15 @@
+## [1.0.0-preview.26] - 2019-05-01
+
+### Removed unused variable to fix warning
+
+## [1.0.0-preview.25] - 2019-05-01
+
+### Importing SVG from editor code allows local Texture2D references
+### Fixed pivot not being applied on textured sprite assets
+### URL scheme whitelisting on image tags
+### Using next power-of-two texture size, fixes gradient issues on some Android devices
+### Fixed SVGParser rotation center in transforms
+
 ## [1.0.0-preview.24] - 2019-04-04
 
 ### Applying material's color in VectorGradient.shader
