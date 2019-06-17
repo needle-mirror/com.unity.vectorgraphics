@@ -8,6 +8,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.Experimental.U2D;
 using UnityEngine.Experimental.U2D;
+using UnityEditor.U2D.Sprites;
 
 namespace Unity.VectorGraphics.Editor
 {
@@ -163,6 +164,9 @@ namespace Unity.VectorGraphics.Editor
                 if (m_PreviewTexture == null)
                 {
                     var sprite = GetSprite();
+                    if (sprite == null)
+                        return null;
+
                     var size = ((Vector2)sprite.bounds.size) * sprite.pixelsPerUnit;
 
                     const float kMinTextureSize = 2048.0f;

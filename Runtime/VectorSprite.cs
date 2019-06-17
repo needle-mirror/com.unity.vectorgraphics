@@ -172,7 +172,9 @@ namespace Unity.VectorGraphics
             for (int i = 0; i < vertices.Count; ++i)
             {
                 var v = vertices[i];
+                v.y -= bbox.position.y;
                 v.y = h - v.y;
+                v.y += bbox.position.y;
                 vertices[i] = v;
             }
         }

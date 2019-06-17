@@ -9,6 +9,24 @@ using UnityEngine.Networking;
 
 namespace Unity.VectorGraphics
 {
+    /// <summary>An enum describing the viewport options to use when importing the SVG document.</summary>
+    public enum ViewportOptions
+    {
+        /// <summary>Don't preserve the viewport defined in the SVG document.</summary>
+        DontPreserve,
+
+        /// <summary>Preserves the viewport defined in the SVG document.</summary>
+        PreserveViewport,
+
+        /// <summary>Applies the root view-box defined in the SVG document (if any).</summary>
+        /// <remarks>
+        /// This option will rescale the SVG asset to a unit size if a view-box is defined in the SVG document.
+        /// If no view-box is defined, this option will have the same behavior as `DontPreserve`.
+        /// It has limited use and is only available for legacy reasons.
+        /// </remarks>
+        OnlyApplyRootViewBox
+    }
+
     /// <summary>Reads an SVG document and builds a vector scene.</summary>
     public class SVGParser
     {
@@ -46,6 +64,20 @@ namespace Unity.VectorGraphics
         /// <returns>A SceneInfo object containing the scene data</returns>
         public static SceneInfo ImportSVG(TextReader textReader, float dpi = 0.0f, float pixelsPerUnit = 1.0f, int windowWidth = 0, int windowHeight = 0, bool clipViewport = false)
         {
+            var viewportOptions = clipViewport ? ViewportOptions.PreserveViewport : ViewportOptions.DontPreserve;
+            return ImportSVG(textReader, viewportOptions, dpi, pixelsPerUnit, windowWidth, windowHeight);
+        }
+
+        /// <summary>Kicks off an SVG file import.</summary>
+        /// <param name="reader">The reader object containing the SVG file data</param>
+        /// <param name="viewportOptions">The viewport options to use</param>
+        /// <param name="dpi">The DPI of the SVG file, or 0 to use the device's DPI</param>
+        /// <param name="pixelsPerUnit">How many SVG units fit in a Unity unit</param>
+        /// <param name="windowWidth">The default with of the viewport, may be 0</param>
+        /// <param name="windowHeight">The default height of the viewport, may be 0</param>
+        /// <returns>A SceneInfo object containing the scene data</returns>
+        public static SceneInfo ImportSVG(TextReader textReader, ViewportOptions viewportOptions, float dpi = 0.0f, float pixelsPerUnit = 1.0f, int windowWidth = 0, int windowHeight = 0)
+        {
             var scene = new Scene();
             var settings = new XmlReaderSettings();
             settings.IgnoreComments = true;
@@ -71,7 +103,10 @@ namespace Unity.VectorGraphics
             SVGDocument doc;
             using (var reader = XmlReader.Create(textReader, settings))
             {
-                doc = new SVGDocument(reader, dpi, scene, windowWidth, windowHeight);
+                bool applyRootViewBox =
+                    (viewportOptions == ViewportOptions.PreserveViewport) ||
+                    (viewportOptions == ViewportOptions.OnlyApplyRootViewBox);
+                doc = new SVGDocument(reader, dpi, scene, windowWidth, windowHeight, applyRootViewBox);
                 doc.Import();
                 nodeOpacities = doc.NodeOpacities;
                 nodeIDs = doc.NodeIDs;
@@ -81,7 +116,7 @@ namespace Unity.VectorGraphics
             if ((scale != 1.0f) && (scene != null) && (scene.Root != null))
                 scene.Root.Transform = scene.Root.Transform * Matrix2D.Scale(new Vector2(scale, scale));
 
-            if (clipViewport && (scene != null) && (scene.Root != null))
+            if ((viewportOptions == ViewportOptions.PreserveViewport) && (scene != null) && (scene.Root != null))
             {
                 // Only add clipper if the scene isn't entirely contained in the viewport
                 var sceneBounds = VectorUtils.SceneNodeBounds(scene.Root);
@@ -199,7 +234,7 @@ namespace Unity.VectorGraphics
 
     internal class SVGDocument
     {
-        public SVGDocument(XmlReader docReader, float dpi, Scene scene, int windowWidth, int windowHeight)
+        public SVGDocument(XmlReader docReader, float dpi, Scene scene, int windowWidth, int windowHeight, bool applyRootViewBox)
         {
             allElems = new ElemHandler[]
             { circle, defs, ellipse, g, image, line, linearGradient, path, polygon, polyline, radialGradient, clipPath, pattern, mask, rect, symbol, use, style };
@@ -213,6 +248,7 @@ namespace Unity.VectorGraphics
             this.dpiScale = dpi / 90.0f; // SVG specs assume 90DPI but this machine might use something else
             this.windowWidth = windowWidth;
             this.windowHeight = windowHeight;
+            this.applyRootViewBox = applyRootViewBox;
             this.svgObjects[StockBlackNonZeroFillName] = new SolidFill() { Color = new Color(0, 0, 0), Mode = FillMode.NonZero };
             this.svgObjects[StockBlackOddEvenFillName] = new SolidFill() { Color = new Color(0, 0, 0), Mode = FillMode.OddEven };
         }
@@ -1076,7 +1112,8 @@ namespace Unity.VectorGraphics
 
             sceneViewport = ParseViewport(node, sceneNode, new Vector2(windowWidth, windowHeight));
             var viewBoxInfo = ParseViewBox(node, sceneNode, sceneViewport);
-            ApplyViewBox(sceneNode, viewBoxInfo, sceneViewport);
+            if (applyRootViewBox)
+                ApplyViewBox(sceneNode, viewBoxInfo, sceneViewport);
 
             currentContainerSize.Push(sceneViewport.size);
             if (!viewBoxInfo.IsEmpty)
@@ -2154,6 +2191,7 @@ namespace Unity.VectorGraphics
         ElemHandler[] allElems;
         HashSet<ElemHandler> elemsToAddToHierarchy;
         SVGStyleResolver styles = new SVGStyleResolver();
+        bool applyRootViewBox;
 
         internal Rect sceneViewport;
 

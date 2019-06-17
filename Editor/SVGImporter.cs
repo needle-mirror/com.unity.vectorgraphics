@@ -11,6 +11,7 @@ using UnityEditor.Experimental.U2D;
 using UnityEngine.Experimental.U2D;
 using UnityEditor.Experimental.AssetImporters;
 using UnityEngine.Experimental.Rendering;
+using UnityEditor.U2D.Sprites;
 
 namespace Unity.VectorGraphics.Editor
 {
@@ -84,13 +85,21 @@ namespace Unity.VectorGraphics.Editor
         }
         [SerializeField] private bool m_GeneratePhysicsShape;
 
-        /// <summary>Preserves the viewport defined in the SVG document.</summary>
-        public bool PreserveViewport {
-            get { return m_PreserveViewport; }
-            set { m_PreserveViewport = value; }
+        /// <summary>Viewport options to use when importing the SVG document.</summary>
+        public ViewportOptions ViewportOptions {
+            get { return m_ViewportOptions; }
+            set { m_ViewportOptions = value; }
         }
-        [SerializeField] private bool m_PreserveViewport;
+        [SerializeField] private ViewportOptions m_ViewportOptions = ViewportOptions.DontPreserve;
 
+         /// <summary>Preserves the viewport defined in the SVG document.</summary>
+         [Obsolete("Use the ViewportOptions property instead")]
+         public bool PreserveViewport {
+             get { return m_PreserveViewport; }
+             set { m_PreserveViewport = value; }
+         }
+         [SerializeField] private bool m_PreserveViewport;
+ 
         /// <summary>Use advanced settings.</summary>
         public bool AdvancedMode {
             get { return m_AdvancedMode; }
@@ -237,11 +246,13 @@ namespace Unity.VectorGraphics.Editor
         /// <param name="ctx">The asset import context of the scripted importer</param>
         public override void OnImportAsset(AssetImportContext ctx)
         {
+            UpdateProperties();
+
             // We're using a hardcoded window size of 100x100. This way, using a pixels per point value of 100
             // results in a sprite of size 1 when the SVG file has a viewbox specified.
             SVGParser.SceneInfo sceneInfo;
             using (var stream = new StreamReader(ctx.assetPath))
-                sceneInfo = SVGParser.ImportSVG(stream, 0, 1, 100, 100, PreserveViewport);
+                sceneInfo = SVGParser.ImportSVG(stream, ViewportOptions, 0, 1, 100, 100);
 
             if (sceneInfo.Scene == null || sceneInfo.Scene.Root == null)
                 throw new Exception("Wowzers!");
@@ -265,7 +276,7 @@ namespace Unity.VectorGraphics.Editor
             tessOptions.StepDistance = stepDist;
 
             var rect = Rect.zero;
-            if (PreserveViewport)
+            if (ViewportOptions == ViewportOptions.PreserveViewport)
                 rect = sceneInfo.SceneViewport;
 
             var geometry = VectorUtils.TessellateScene(sceneInfo.Scene, tessOptions, sceneInfo.NodeOpacity);
@@ -278,6 +289,17 @@ namespace Unity.VectorGraphics.Editor
                 GenerateTexturedSpriteAsset(ctx, sprite, name);
             else if (SvgType == SVGType.Texture2D)
                 GenerateTexture2DAsset(ctx, sprite, name);
+        }
+
+        private void UpdateProperties()
+        {
+            // The "PreserveViewport" property is deprecated and should be moved to the "ViewportOptions" property
+            if (m_PreserveViewport)
+            {
+                m_ViewportOptions = ViewportOptions.PreserveViewport;
+                m_PreserveViewport = false;
+            }
+            EditorUtility.SetDirty(this);
         }
 
         private void GenerateSpriteAsset(AssetImportContext ctx, Sprite sprite, string name)

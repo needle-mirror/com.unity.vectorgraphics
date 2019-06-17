@@ -14,7 +14,7 @@ namespace Unity.VectorGraphics.Editor
     {
         internal static void ShowSpriteEditorWindow()
         {
-            SpriteEditorWindow.GetWindow();
+            SpriteUtilityWindow.ShowSpriteEditorWindow();
         }
 
         internal static List<Vector2[]> GenerateOutline(UnityEngine.Texture2D texture, Rect rect, float detail, byte alphaTolerance, bool holeDetection)

@@ -68,35 +68,6 @@ namespace Unity.VectorGraphics
 
             var geoms = new List<Geometry>();
 
-            if (node.Drawables != null)
-            {
-                // We process the drawables even though they are obsolete, until we remove the IDrawable interface entirely
-                foreach (var drawable in node.Drawables)
-                {
-                    var vectorShape = drawable as Shape;
-                    if (vectorShape != null)
-                    {
-                        bool isConvex = vectorShape.IsConvex && vectorShape.Contours.Length == 1;
-                        TessellateShape(vectorShape, geoms, tessellationOptions, isConvex);
-                        continue;
-                    }
-
-                    var vectorPath = drawable as Path;
-                    if (vectorPath != null)
-                    {
-                        TessellatePath(vectorPath.Contour, vectorPath.PathProps, geoms, tessellationOptions);
-                        continue;
-                    }
-
-                    var vectorRect = drawable as Rectangle;
-                    if (vectorRect != null)
-                    {
-                        TessellateRectangle(vectorRect, geoms, tessellationOptions);
-                        continue;
-                    }
-                }
-            }
-
             if (node.Shapes != null)
             {
                 foreach (var shape in node.Shapes)
@@ -144,43 +115,6 @@ namespace Unity.VectorGraphics
             foreach (var nodeInfo in WorldTransformedSceneNodes(root, null))
             {
                 var node = nodeInfo.Node;
-
-                // We process the drawables even though they are obsolete, until we remove the IDrawable interface entirely
-                if (node.Drawables != null)
-                {
-                    foreach (var drawable in node.Drawables)
-                    {
-                        var vectorShape = drawable as Shape;
-                        if (vectorShape != null)
-                        {
-                            foreach (var c in vectorShape.Contours)
-                            {
-                                var shape = VectorUtils.TraceShape(c, vectorShape.PathProps.Stroke, tessellationOptions);
-                                if (shape.Length > 0)
-                                    shapes.Add(shape.Select(v => nodeInfo.WorldTransform * v).ToArray());
-                            }
-                            continue;
-                        }
-
-                        var vectorPath = drawable as Path;
-                        if (vectorPath != null)
-                        {
-                            var shape = VectorUtils.TraceShape(vectorPath.Contour, vectorPath.PathProps.Stroke, tessellationOptions);
-                            if (shape.Length > 0)
-                                shapes.Add(shape.Select(v => nodeInfo.WorldTransform * v).ToArray());
-                            continue;
-                        }
-
-                        var vectorRect = drawable as Rectangle;
-                        if (vectorRect != null)
-                        {
-                            var shape = VectorUtils.TraceRectangle(vectorRect, vectorRect.PathProps.Stroke, tessellationOptions);
-                            if (shape.Length > 0)
-                                shapes.Add(shape.Select(v => nodeInfo.WorldTransform * v).ToArray());
-                            continue;
-                        }
-                    }
-                }
 
                 if (node.Shapes != null)
                 {

@@ -30,7 +30,7 @@ namespace Unity.VectorGraphics.Editor
         private SerializedProperty m_Alignment;
         private SerializedProperty m_CustomPivot;
         private SerializedProperty m_GeneratePhysicsShape;
-        private SerializedProperty m_PreserveViewport;
+        private SerializedProperty m_ViewportOptions;
         private SerializedProperty m_AdvancedMode;
         private SerializedProperty m_StepDistance;
         private SerializedProperty m_SamplingStepDistance;
@@ -56,7 +56,7 @@ namespace Unity.VectorGraphics.Editor
         private readonly GUIContent m_AlignmentText = new GUIContent("Pivot", "Sprite pivot point in its local space.");
         private readonly GUIContent m_CustomPivotText = new GUIContent("Custom Pivot");
         private readonly GUIContent m_GeneratePhysicsShapeText = new GUIContent("Generate Physics Shape");
-        private readonly GUIContent m_PreserveViewportText = new GUIContent("Preserve Viewport", "Preserve the viewport defined in the SVG document");
+        private readonly GUIContent m_ViewportOptionsText = new GUIContent("Viewport Options", "Viewport options to use while importing the SVG document");
         private readonly GUIContent m_SettingsText = new GUIContent("Tessellation Settings");
         private readonly GUIContent m_TargetResolutionText = new GUIContent("Target Resolution", "Target resolution below which the sprite will not look tessellated.");
         private readonly GUIContent m_CustomTargetResolutionText = new GUIContent("Custom Target Resolution");
@@ -85,6 +85,20 @@ namespace Unity.VectorGraphics.Editor
             (int)SVGType.VectorSprite,
             (int)SVGType.TexturedSprite,
             (int)SVGType.Texture2D
+        };
+
+        private readonly GUIContent[] viewportOptions =
+        {
+            new GUIContent("Don't Preserve Viewport", "Don't preserve the viewport defined in the SVG document."),
+            new GUIContent("Preserve Viewport", "Preserves the viewport defined in the SVG document."),
+            new GUIContent("Only Apply Root ViewBox", "Applies the root view-box defined in the SVG document (if any).")
+        };
+
+        private readonly int[] viewportOptionsValues =
+        {
+            (int)ViewportOptions.DontPreserve,
+            (int)ViewportOptions.PreserveViewport,
+            (int)ViewportOptions.OnlyApplyRootViewBox
         };
 
         private readonly GUIContent[] texturedSpriteMeshTypeOptions =
@@ -177,6 +191,8 @@ namespace Unity.VectorGraphics.Editor
 
         public override void OnEnable()
         {
+            base.OnEnable();
+
             m_SVGType = serializedObject.FindProperty("m_SvgType");
             m_TexturedSpriteMeshType = serializedObject.FindProperty("m_TexturedSpriteMeshType");
             m_PixelsPerUnit = serializedObject.FindProperty("m_SvgPixelsPerUnit");
@@ -184,7 +200,7 @@ namespace Unity.VectorGraphics.Editor
             m_Alignment = serializedObject.FindProperty("m_Alignment");
             m_CustomPivot = serializedObject.FindProperty("m_CustomPivot");
             m_GeneratePhysicsShape = serializedObject.FindProperty("m_GeneratePhysicsShape");
-            m_PreserveViewport = serializedObject.FindProperty("m_PreserveViewport");
+            m_ViewportOptions = serializedObject.FindProperty("m_ViewportOptions");
             m_AdvancedMode = serializedObject.FindProperty("m_AdvancedMode");
             m_PredefinedResolutionIndex = serializedObject.FindProperty("m_PredefinedResolutionIndex");
             m_TargetResolution = serializedObject.FindProperty("m_TargetResolution");
@@ -206,6 +222,10 @@ namespace Unity.VectorGraphics.Editor
 
         public override void OnInspectorGUI()
         {
+            #if UNITY_2019_2_OR_NEWER
+            serializedObject.UpdateIfRequiredOrScript();
+            #endif
+
             PropertyField(m_PixelsPerUnit, m_PixelsPerUnitText);
             PropertyField(m_GradientResolution, m_GradientResolutionText);
             IntPopup(m_Alignment, m_AlignmentText, m_AlignmentOptions);
@@ -220,7 +240,7 @@ namespace Unity.VectorGraphics.Editor
             using (new EditorGUI.DisabledScope(m_SVGType.hasMultipleDifferentValues || m_SVGType.intValue == (int)SVGType.Texture2D))
                 IntToggle(m_GeneratePhysicsShape, m_GeneratePhysicsShapeText);
 
-            IntToggle(m_PreserveViewport, m_PreserveViewportText);
+            IntPopup(m_ViewportOptions, m_ViewportOptionsText, viewportOptions);
 
             EditorGUILayout.Space();
 
@@ -319,6 +339,10 @@ namespace Unity.VectorGraphics.Editor
                 }
                 GUILayout.EndHorizontal();
             }
+
+            #if UNITY_2019_2_OR_NEWER
+            serializedObject.ApplyModifiedProperties();
+            #endif
 
             ApplyRevertGUI();
         }

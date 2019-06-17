@@ -137,33 +137,6 @@ namespace Unity.VectorGraphics
             MakeEllipseShape(circleShape, pos, radius, radius);
         }
 
-        /// <summary>Builds a rounded rectangle in an ellipse shape.</summary>
-        /// <param name="rect">The Rectangle that will be rounded to hold the ellipse.</param>
-        /// <param name="pos">The position of the ellipse, relative to its center.</param>
-        /// <param name="radiusX">The X axis of the ellipse.</param>
-        /// <param name="radiusY">The Y axis of the ellipse.</param>
-        /// <returns>A rectangle object with rounded corners to form an ellipse</returns>
-        [Obsolete("Use MakeEllipseShape instead")]
-        public static Rectangle MakeEllipse(Vector2 pos, float radiusX, float radiusY)
-        {
-            var rect = new Rectangle();
-            rect.Position = new Vector2(pos.x - radiusX, pos.y - radiusY);
-            rect.Size = new Vector2(radiusX + radiusX, radiusY + radiusY);
-            rect.RadiusTL = rect.RadiusTR = rect.RadiusBL = rect.RadiusBR = new Vector2(radiusX, radiusY);
-            return rect;
-        }
-
-        /// <summary>Builds a rounded rectangle in a circle shape.</summary>
-        /// <param name="rect">The Rectangle that will be rounded to hold the circle.</param>
-        /// <param name="pos">The position of the circle, relative to its center.</param>
-        /// <param name="radius">The radius of the circle.</param>
-        /// <returns>A rectangle object with rounded corners to form a circle</returns>
-        [Obsolete("Use MakeCircleShape instead")]
-        public static Rectangle MakeCircle(Vector2 pos, float radius)
-        {
-            return MakeEllipse(pos, radius, radius);
-        }
-
         /// <summary>Computes the bounds of a bezier path.</summary>
         /// <param name="path">The path to compute the bounds from</param>
         /// <returns>A Rect containing the axis-aligned bounding-box of the contour</returns>
@@ -757,27 +730,6 @@ namespace Unity.VectorGraphics
             return WorldTransformedSceneNodes(root, nodeOpacities, rootNodeWorldTransform);
         }
 
-        /// <summary>Realigns the vertices inside their axis-aligned bounding-box.</summary>
-        /// <param name="vertices">The vertices to realign</param>
-        /// <param name="flip">A boolean indicating whether to flip the coordinates on the Y axis</param>
-        /// <returns>The axis-aligned bounding-box of the original vertices</returns>
-        [Obsolete("Please use RealignVerticesInBounds(IList<Vector2>, Rect, bool) instead")]
-        public static Rect RealignVerticesInBounds(IList<Vector2> vertices, bool flip)
-        {
-            var bbox = Bounds(vertices);
-            var p = bbox.position;
-            var h = bbox.height;
-            for (int i = 0; i < vertices.Count; ++i)
-            {
-                var v = vertices[i];
-                v -= p;
-                if (flip)
-                    v.y = h - v.y;
-                vertices[i] = v;
-            }
-            return bbox;
-        }
-
         /// <summary>Realigns the vertices (in-place) inside their axis-aligned bounding-box.</summary>
         /// <param name="vertices">The vertices to realign</param>
         /// <param name="bounds">The bounds into which the vertices will be realigned</param>
@@ -1027,44 +979,6 @@ namespace Unity.VectorGraphics
                 var shapeMin = new Vector2(float.MaxValue, float.MaxValue);
                 var shapeMax = new Vector2(-float.MaxValue, -float.MaxValue);
 
-                // We process the drawables even though they are obsolete, until we remove the IDrawable interface entirely
-                if (tnode.Node.Drawables != null)
-                {
-                    foreach (var drawable in tnode.Node.Drawables)
-                    {
-                        var path = drawable as Path;
-                        if (path != null)
-                        {
-                            var bbox = Bounds(TransformBezierPath(path.Contour.Segments, tnode.WorldTransform));
-                            shapeMin = Vector2.Min(shapeMin, bbox.min);
-                            shapeMax = Vector2.Max(shapeMax, bbox.max);
-                        }
-
-                        var shape = drawable as Shape;
-                        if (shape != null)
-                        {
-                            foreach (var contour in shape.Contours)
-                            {
-                                var bbox = Bounds(TransformBezierPath(contour.Segments, tnode.WorldTransform));
-                                shapeMin = Vector2.Min(shapeMin, bbox.min);
-                                shapeMax = Vector2.Max(shapeMax, bbox.max);
-                            }
-                        }
-
-                        var rect = drawable as Rectangle;
-                        if (rect != null)
-                        {
-                            var vertices = new Vector2[] {
-                            tnode.WorldTransform * rect.Position,
-                            tnode.WorldTransform * (rect.Size + rect.Position)
-                        };
-                            var bbox = Bounds(vertices);
-                            shapeMin = Vector2.Min(shapeMin, bbox.min);
-                            shapeMax = Vector2.Max(shapeMax, bbox.max);
-                        }
-                    }
-                }
-
                 if (tnode.Node.Shapes != null)
                 {
                     foreach (var shape in tnode.Node.Shapes)
@@ -1099,45 +1013,6 @@ namespace Unity.VectorGraphics
 
             foreach (var tnode in WorldTransformedSceneNodes(root, null))
             {
-                // We process the drawables even though they are obsolete, until we remove the IDrawable interface entirely
-                if (tnode.Node.Drawables != null)
-                {
-                    foreach (var drawable in tnode.Node.Drawables)
-                    {
-                        var path = drawable as Path;
-                        if (path != null)
-                        {
-                            foreach (var seg in TransformBezierPath(path.Contour.Segments, tnode.WorldTransform))
-                            {
-                                vertices.Add(seg.P0);
-                                vertices.Add(seg.P1);
-                                vertices.Add(seg.P2);
-                            }
-                        }
-
-                        var shape = drawable as Shape;
-                        if (shape != null)
-                        {
-                            foreach (var contour in shape.Contours)
-                            {
-                                foreach (var seg in TransformBezierPath(contour.Segments, tnode.WorldTransform))
-                                {
-                                    vertices.Add(seg.P0);
-                                    vertices.Add(seg.P1);
-                                    vertices.Add(seg.P2);
-                                }
-                            }
-                        }
-
-                        var rect = drawable as Rectangle;
-                        if (rect != null)
-                        {
-                            vertices.Add(tnode.WorldTransform * rect.Position);
-                            vertices.Add(tnode.WorldTransform * (rect.Position + rect.Size));
-                        }
-                    }
-                }
-
                 if (tnode.Node.Shapes != null)
                 {
                     foreach (var shape in tnode.Node.Shapes)

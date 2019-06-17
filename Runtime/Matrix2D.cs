@@ -281,15 +281,6 @@ namespace Unity.VectorGraphics
             return m;
         }
 
-        /// <summary>Creates a rotation matrix. Note: Assumes unit quaternion.</summary>
-        /// <param name="angleRadians">The rotation angle, in radians</param>
-        /// <returns>The rotation matrix</returns>
-        [Obsolete("Use RotateRH or RotateLH instead")]
-        public static Matrix2D Rotate(float angleRadians)
-        {
-            return RotateLH(angleRadians);
-        }
-
         /// <summary>Creates a right-hand side rotation matrix.</summary>
         /// <param name="angleRadians">The rotation angle, in radians</param>
         /// <returns>The rotation matrix</returns>

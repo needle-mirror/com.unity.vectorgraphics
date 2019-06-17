@@ -440,4 +440,40 @@ public class UtilsTests
         Assert.AreEqual(0.096f, q.x, 0.001f);
         Assert.AreEqual(0.995f, q.y, 0.001f);
     }
+
+    [Test]
+    public void FillMesh_WithFlipYAxis_FlipsYAxis()
+    {
+        // Build a square of size 1x1 located at (2,2)
+        var rectShape = new Shape();
+        VectorUtils.MakeRectangleShape(rectShape, new Rect(2, 2, 1, 1));
+        rectShape.Fill = new SolidFill() { Color = Color.red };
+        var scene = new Scene() {
+            Root = new SceneNode() { Shapes = new List<Shape>() { rectShape } }
+        };
+
+        var options = new VectorUtils.TessellationOptions() {
+            StepDistance = 1000.0f,
+            MaxCordDeviation = float.MaxValue,
+            MaxTanAngleDeviation = float.MaxValue,
+            SamplingStepSize = 0.01f
+        };
+        var geoms = VectorUtils.TessellateScene(scene, options);
+
+        // Build a mesh without flipping
+        var mesh = new Mesh();
+        VectorUtils.FillMesh(mesh, geoms, 1.0f, false);
+
+        // Build a mesh with flipping
+        var flippedMesh = new Mesh();
+        VectorUtils.FillMesh(flippedMesh, geoms, 1.0f, true);
+
+        for (int i = 0; i < mesh.vertices.Length; ++i)
+        {
+            var vert = mesh.vertices[i];
+            var flippedVert = flippedMesh.vertices[i];
+            float expectedY = (1.0f - (vert.y-2.0f)) + 2.0f; // Manual flip for the test!
+            Assert.AreEqual(expectedY, flippedVert.y, 0.001f);
+        }
+    }
 }

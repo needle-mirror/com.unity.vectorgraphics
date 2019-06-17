@@ -124,10 +124,6 @@ namespace Unity.VectorGraphics
         public bool Closed { get; set; }
     }
 
-    /// <summary>The IDrawable interface is implemented by elements that displays something on screen.</summary>
-    [Obsolete("This interface is going away, use Shape instead")]
-    public interface IDrawable { }
-
     /// <summary>The IFill interface is implemented by filling techniques (solid, texture or gradient).</summary>
     public interface IFill
     {
@@ -250,60 +246,8 @@ namespace Unity.VectorGraphics
         public PathCorner Corners { get; set; }
     }
 
-    /// <summary>A path definition.</summary>
-    [Obsolete("Use the Shape class with no fill instead")]
-    public class Path : IDrawable
-    {
-        /// <summary>The bezier contour defining the path.</summary>
-        public BezierContour Contour { get; set; }
-
-        /// <summary>The path properties.</summary>
-        public PathProperties PathProps { get; set; }
-    }
-
-    /// <summary>Filled shape representation.</summary>
-    [Obsolete("The filled properties are moved to the Shape class")]
-    public abstract class Filled : IDrawable
-    {
-        /// <summary>The fill used on the shape.</summary>
-        public IFill Fill { get; set; }
-
-        /// <summary>A transformation specific to the fill.</summary>
-        public Matrix2D FillTransform { get { return m_FillTransform; } set { m_FillTransform = value; } }
-        private Matrix2D m_FillTransform = Matrix2D.identity;
-
-        /// <summary>The path properties.</summary>
-        public PathProperties PathProps { get; set; }
-    }
-
-    /// <summary>Defines a rectangle shape, which may be rounded.</summary>
-    [Obsolete("Use the Shape class and call VectorUtils.MakeRectangleShape() instead")]
-    public class Rectangle : Filled
-    {
-        /// <summary>The position of the rectangle.</summary>
-        /// <remarks>Rectangles are anchored on their top-left corner, not their center.</remarks>
-        public Vector2 Position { get; set; }
-
-        /// <summary>The size of the rectangle.</summary>        
-        public Vector2 Size { get; set; }
-
-        /// <summary>The top-left radius of the rectangle.</summary>
-        public Vector2 RadiusTL { get; set; }
-
-        /// <summary>The top-right radius of the rectangle.</summary>
-        public Vector2 RadiusTR { get; set; }
-
-        /// <summary>The bottom-left radius of the rectangle.</summary>
-        public Vector2 RadiusBL { get; set; }
-
-        /// <summary>The bottom-right radius of the rectangle.</summary>
-        public Vector2 RadiusBR { get; set; }
-    }
-
     /// <summary>A generic filled shape.</summary>
-    #pragma warning disable 618 // Silence use of deprecated IDrawable
-    public class Shape : IDrawable
-    #pragma warning restore 618
+    public class Shape
     {
         /// <summary>All the contours defining the shape.</summary>
         /// <remarks>
@@ -334,12 +278,6 @@ namespace Unity.VectorGraphics
     {
         /// <summary>The list of children nodes.</summary>
         public List<SceneNode> Children { get; set; }
-
-        /// <summary>The list drawable elements.</summary>
-        #pragma warning disable 618 // Silence use of deprecated IDrawable
-        [Obsolete("Use the Shapes property instead")]
-        public List<IDrawable> Drawables { get; set; }
-        #pragma warning restore 618
 
         /// <summary>The list of shapes inside this node.</summary>
         public List<Shape> Shapes { get; set; }
