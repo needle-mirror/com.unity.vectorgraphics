@@ -5,7 +5,7 @@ The Vector Graphics package provides an SVG importer as well as generic vector g
 ## Requirements
 
 This Vector Graphics package version 1.0.0 is compatible with the following versions of the Unity Editor:
-2018.1 and later (recommended)
+2018.1 up to 2019.1 (recommended).
 
 ## Known limitations
 
