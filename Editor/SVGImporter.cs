@@ -25,12 +25,17 @@ namespace Unity.VectorGraphics.Editor
         TexturedSprite,
 
         /// <summary>The SVG file will be imported as a Texture2D</summary>
-        Texture2D
+        Texture2D,
+
+#if UNITY_2019_3_OR_NEWER
+        /// <summary>The SVG file will be imported as a UIElement Vector Image asset</summary>
+        UIElement
+#endif
     }
 
     /// <summary>The SVG importer class.</summary>
     [Serializable]
-    [ScriptedImporter(1, "svg")]
+    [ScriptedImporter(2, "svg")]
     public class SVGImporter : ScriptedImporter, ISpriteEditorDataProvider
     {
         internal static readonly string k_PackagePath = "Packages/com.unity.vectorgraphics";
@@ -280,15 +285,36 @@ namespace Unity.VectorGraphics.Editor
                 rect = sceneInfo.SceneViewport;
 
             var geometry = VectorUtils.TessellateScene(sceneInfo.Scene, tessOptions, sceneInfo.NodeOpacity);
-            var sprite = VectorUtils.BuildSprite(geometry, rect, SvgPixelsPerUnit, Alignment, CustomPivot, GradientResolution, true);
-
             var name = System.IO.Path.GetFileNameWithoutExtension(ctx.assetPath);
-            if (SvgType == SVGType.VectorSprite)
-                GenerateSpriteAsset(ctx, sprite, name);
-            else if (SvgType == SVGType.TexturedSprite)
-                GenerateTexturedSpriteAsset(ctx, sprite, name);
-            else if (SvgType == SVGType.Texture2D)
-                GenerateTexture2DAsset(ctx, sprite, name);
+            Sprite sprite = null;
+
+            switch (SvgType)
+            {
+                case SVGType.VectorSprite:
+                    sprite = BuildSpriteFromGeometry(geometry, rect);
+                    GenerateSpriteAsset(ctx, sprite, name);
+                    break;
+                case SVGType.TexturedSprite:
+                    sprite = BuildSpriteFromGeometry(geometry, rect);
+                    GenerateTexturedSpriteAsset(ctx, sprite, name);
+                    break;
+                case SVGType.Texture2D:
+                    sprite = BuildSpriteFromGeometry(geometry, rect);
+                    GenerateTexture2DAsset(ctx, sprite, name);
+                    break;
+#if UNITY_2019_3_OR_NEWER
+                case SVGType.UIElement:
+                    GenerateUIElementAsset(ctx, geometry, name);
+                    break;
+#endif
+                default:
+                    break;
+            }
+        }
+
+        private Sprite BuildSpriteFromGeometry(List<VectorUtils.Geometry> geometry, Rect rect)
+        {
+            return VectorUtils.BuildSprite(geometry, rect, SvgPixelsPerUnit, Alignment, CustomPivot, GradientResolution, true);
         }
 
         private void UpdateProperties()
@@ -390,6 +416,29 @@ namespace Unity.VectorGraphics.Editor
             GameObject.DestroyImmediate(sprite);
         }
 
+#if UNITY_2019_3_OR_NEWER
+        private void GenerateUIElementAsset(AssetImportContext ctx, List<VectorUtils.Geometry> geometry, string name)
+        {
+            UnityEngine.Object asset;
+            Texture2D texAtlas;
+            Unity.VectorGraphics.InternalBridge.MakeUIElementsAsset(geometry, GradientResolution, out asset, out texAtlas);
+
+            if (asset == null)
+            {
+                Debug.LogError("UIElement asset generation failed");
+                return;
+            }
+
+            if (texAtlas != null)
+                texAtlas.name = name + "Atlas";
+
+            ctx.AddObjectToAsset("uiAsset", asset);
+            if (texAtlas != null)
+                ctx.AddObjectToAsset("tex", texAtlas);
+            ctx.SetMainObject(asset);
+        }
+#endif
+
         private Texture2D BuildTexture(Sprite sprite, string name)
         {
             int textureWidth = 0;
@@ -431,7 +480,7 @@ namespace Unity.VectorGraphics.Editor
                 var textureDataProvider = (this as ISpriteEditorDataProvider).GetDataProvider<ITextureDataProvider>();
                 var tex = textureDataProvider.GetReadableTexture2D();
 
-                outlines = InternalBridge.GenerateOutline(tex, new Rect(0,0,tex.width,tex.height), kDefaultPhysicsTessellationDetail, kDefaultSpritePhysicsAlphaTolerance, false);
+                outlines = InternalEditorBridge.GenerateOutline(tex, new Rect(0,0,tex.width,tex.height), kDefaultPhysicsTessellationDetail, kDefaultSpritePhysicsAlphaTolerance, false);
                 if (outlines == null || outlines.Count == 0)
                     return;
             }
@@ -491,16 +540,37 @@ namespace Unity.VectorGraphics.Editor
 
         private void ComputeTessellationOptions(SVGParser.SceneInfo sceneInfo, int targetResolution, float multiplier, out float stepDist, out float maxCord, out float maxTangent)
         {
+            // These tessellation options were found by trial and error to find values that made
+            // visual sense with a variety of SVG assets.
+
+            // "Pixels per Unit" doesn't make sense for UIElements since it will be displayed in
+            // a pixels space.  We adjust the magic values below accordingly.
+            #if UNITY_2019_3_OR_NEWER
+            float ppu = (SvgType == SVGType.UIElement) ? 1.0f : SvgPixelsPerUnit;
+            #else
+            float ppu = SvgPixelsPerUnit;
+            #endif
+
             var bbox = VectorUtils.ApproximateSceneNodeBounds(sceneInfo.Scene.Root);
-            float maxDim = Mathf.Max(bbox.width, bbox.height) / SvgPixelsPerUnit;
+            float maxDim = Mathf.Max(bbox.width, bbox.height) / ppu;
 
             // The scene ratio gives a rough estimate of coverage % of the vector scene on the screen.
             // Higher values should result in a more dense tessellation.
             float sceneRatio = maxDim / (targetResolution * multiplier);
 
             stepDist = float.MaxValue; // No need for uniform step distance
-            maxCord = Mathf.Max(0.01f, 75.0f * sceneRatio);
-            maxTangent = Mathf.Max(0.1f, 100.0f * sceneRatio);
+            #if UNITY_2019_3_OR_NEWER
+            if (SvgType == SVGType.UIElement)
+            {
+                maxCord = Mathf.Max(0.01f, 2.0f * sceneRatio);
+                maxTangent = Mathf.Max(0.1f, 3.0f * sceneRatio);
+            }
+            else
+            #endif
+            {
+                maxCord = Mathf.Max(0.01f, 75.0f * sceneRatio);
+                maxTangent = Mathf.Max(0.1f, 100.0f * sceneRatio);
+            }
         }
 
         internal static Sprite GetImportedSprite(string assetPath)
@@ -536,13 +606,17 @@ namespace Unity.VectorGraphics.Editor
         private static Material s_VectorMat = null;
         private static Material s_GradientMat = null;
 
-        internal static Material GetSVGSpriteMaterial(Sprite sprite)
+        internal static Material CreateSVGSpriteMaterial(Sprite sprite)
         {
             if (sprite == null)
                 return null;
-            
+            return CreateSVGSpriteMaterial(sprite.texture != null);
+        }
+
+        internal static Material CreateSVGSpriteMaterial(bool hasTexture)
+        {
             Material mat = null;
-            if (sprite.texture != null)
+            if (hasTexture)
             {
                 if (s_GradientMat == null)
                 {

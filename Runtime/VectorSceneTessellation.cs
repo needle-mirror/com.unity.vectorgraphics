@@ -295,7 +295,7 @@ namespace Unity.VectorGraphics
             v.y = t;
         }
 
-        struct RawTexture
+        internal struct RawTexture
         {
             public Color32[] Rgba;
             public int Width;
@@ -346,8 +346,10 @@ namespace Unity.VectorGraphics
         /// <summary>Generates a Texture2D atlas containing the textures and gradients for the vector geometry.</summary>
         /// <param name="geoms">The list of Geometry objects, probably created with TessellateNodeHierarchy</param>
         /// <param name="rasterSize">Maximum size of the generated texture</param>
+        /// <param name="generatePOTTexture">Resize the texture to the next power-of-two</param>
+        /// <param name="encodeSettings">Encode the gradient settings inside the texture</param>
         /// <returns>The generated texture atlas</returns>
-        public static TextureAtlas GenerateAtlas(IEnumerable<Geometry> geoms, uint rasterSize)
+        public static TextureAtlas GenerateAtlas(IEnumerable<Geometry> geoms, uint rasterSize, bool generatePOTTexture = true, bool encodeSettings = true)
         {
             UnityEngine.Profiling.Profiler.BeginSample("GenerateAtlas");
 
@@ -364,7 +366,7 @@ namespace Unity.VectorGraphics
                 else if (g.Fill is TextureFill)
                 {
                     var fillTex = ((TextureFill)g.Fill).Texture;
-                    tex = new RawTexture() { Rgba = fillTex.GetPixels32(), Width = fillTex.width, Height = fillTex.height };                    
+                    tex = new RawTexture() { Rgba = fillTex.GetPixels32(), Width = fillTex.width, Height = fillTex.height };
                     ++texturedGeomCount;
                 }
                 else
@@ -381,25 +383,36 @@ namespace Unity.VectorGraphics
             var rectsToPack = fills.Select(x => new KeyValuePair<IFill, Vector2>(x.Key, new Vector2(x.Value.Texture.Width, x.Value.Texture.Height))).ToList();
             rectsToPack.Add(new KeyValuePair<IFill, Vector2>(null, new Vector2(2, 2))); // White fill
             var pack = PackRects(rectsToPack, out atlasSize);
-
-            // The first row of the atlas is reserved for the gradient settings
-            for (int packIndex = 0; packIndex < pack.Count; ++packIndex)
+            
+            if (encodeSettings)
             {
-                var item = pack[packIndex];
-                item.Position.y += 1;
-                pack[packIndex] = item;
+                // The first row/cols of the atlas is reserved for the gradient settings
+                for (int packIndex = 0; packIndex < pack.Count; ++packIndex)
+                {
+                    var item = pack[packIndex];
+                    item.Position.x += 3;
+                    pack[packIndex] = item;
+                }
+                atlasSize.x += 3;
             }
-            atlasSize.y += 1;
 
-            // Need enough space on first row for texture settings
+            // Need enough space on first 3 columns for texture settings
             int maxSettingIndex = 0;
             foreach (var item in pack)
                 maxSettingIndex = Math.Max(maxSettingIndex, item.SettingIndex);
-            int minWidth = (maxSettingIndex+1) * 3;
+            int minWidth = encodeSettings ? 3 : 0;
+            int minHeight = encodeSettings ? (maxSettingIndex + 1) : maxSettingIndex;
             atlasSize.x = Math.Max(minWidth, (int)atlasSize.x);
+            atlasSize.y = Math.Max(minHeight, (int)atlasSize.y);
 
-            int atlasWidth = NextPOT((int)atlasSize.x);
-            int atlasHeight = NextPOT((int)atlasSize.y);
+            int atlasWidth = (int)atlasSize.x;
+            int atlasHeight = (int)atlasSize.y;
+            if (generatePOTTexture)
+            {
+                atlasWidth = NextPOT(atlasWidth);
+                atlasHeight = NextPOT(atlasHeight);
+            }
+
             var atlasColors = new Color32[atlasWidth * atlasHeight];
             for (int k = 0; k < atlasWidth * atlasHeight; ++k)
                 atlasColors[k] = Color.black;
@@ -420,6 +433,23 @@ namespace Unity.VectorGraphics
                 whiteTex.Rgba[i] = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
             BlitRawTexture(whiteTex, rawAtlasTex, (int)whiteTexelsScreenPos.x, (int)whiteTexelsScreenPos.y, false);
 
+            if (encodeSettings)
+                EncodeSettings(geoms, fills, rawAtlasTex, whiteTexelsScreenPos);
+
+            var atlasTex = new Texture2D(atlasWidth, atlasHeight, TextureFormat.ARGB32, false, true);
+            atlasTex.wrapModeU = TextureWrapMode.Clamp;
+            atlasTex.wrapModeV = TextureWrapMode.Clamp;
+            atlasTex.wrapModeW = TextureWrapMode.Clamp;
+            atlasTex.SetPixels32(atlasColors);
+            atlasTex.Apply(false, true);
+
+            UnityEngine.Profiling.Profiler.EndSample();
+
+            return new TextureAtlas() { Texture = atlasTex, Entries = pack };
+        }
+
+        private static void EncodeSettings(IEnumerable<Geometry> geoms, Dictionary<IFill, AtlasEntry> fills, RawTexture rawAtlasTex, Vector2 whiteTexelsScreenPos)
+        {
             // Setting 0 is reserved for the white texel
             WriteRawFloat4Packed(rawAtlasTex, 0.0f, 0.0f, 0.0f, 0.0f, 0, 0);
             WriteRawInt2Packed(rawAtlasTex, (int)whiteTexelsScreenPos.x+1, (int)whiteTexelsScreenPos.y+1, 1, 0);
@@ -441,7 +471,8 @@ namespace Unity.VectorGraphics
                     writtenSettings.Add(setting);
 
                     // There are 3 consecutive pixels to store the settings
-                    int destX = setting * 3;
+                    int destX = 0;
+                    int destY = setting;
 
                     var gradientFill = g.Fill as GradientFill;
                     if (gradientFill != null)
@@ -450,32 +481,22 @@ namespace Unity.VectorGraphics
                         focus += Vector2.one;
                         focus /= 2.0f;
                         focus.y = 1.0f - focus.y;
-                        WriteRawFloat4Packed(rawAtlasTex, ((float)gradientFill.Type)/255, ((float)gradientFill.Addressing)/255, focus.x, focus.y, destX++, 0);
+
+                        WriteRawFloat4Packed(rawAtlasTex, ((float)gradientFill.Type)/255, ((float)gradientFill.Addressing)/255, focus.x, focus.y, destX++, destY);
                     }
 
                     var textureFill = g.Fill as TextureFill;
                     if (textureFill != null)
                     {
-                        WriteRawFloat4Packed(rawAtlasTex, 0.0f, ((float)textureFill.Addressing)/255, 0.0f, 0.0f, destX++, 0);
+                        WriteRawFloat4Packed(rawAtlasTex, 0.0f, ((float)textureFill.Addressing)/255, 0.0f, 0.0f, destX++, destY);
                     }
 
                     var pos = entry.AtlasLocation.Position;
                     var size = new Vector2(entry.Texture.Width-1, entry.Texture.Height-1);
-                    WriteRawInt2Packed(rawAtlasTex, (int)pos.x, (int)pos.y, destX++, 0);
-                    WriteRawInt2Packed(rawAtlasTex, (int)size.x, (int)size.y, destX++, 0);
+                    WriteRawInt2Packed(rawAtlasTex, (int)pos.x, (int)pos.y, destX++, destY);
+                    WriteRawInt2Packed(rawAtlasTex, (int)size.x, (int)size.y, destX++, destY);
                 }
             }
-
-            var atlasTex = new Texture2D(atlasWidth, atlasHeight, TextureFormat.ARGB32, false, true);
-            atlasTex.wrapModeU = TextureWrapMode.Clamp;
-            atlasTex.wrapModeV = TextureWrapMode.Clamp;
-            atlasTex.wrapModeW = TextureWrapMode.Clamp;
-            atlasTex.SetPixels32(atlasColors);
-            atlasTex.Apply();
-
-            UnityEngine.Profiling.Profiler.EndSample();
-
-            return new TextureAtlas() { Texture = atlasTex, Entries = pack };
         }
 
         /// <summary>Fill the UVs of the geometry using the provided texture atlas.</summary>

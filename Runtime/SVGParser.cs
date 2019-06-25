@@ -2613,6 +2613,7 @@ namespace Unity.VectorGraphics
                 throw new Exception("Path must start with a MoveTo pathCommand");
 
             char lastCmdNoCase = '\0';
+            Vector2 lastQCtrlPoint = Vector2.zero;
 
             while (NextPathCommand() != (char)0)
             {
@@ -2665,10 +2666,10 @@ namespace Unity.VectorGraphics
 
                     if (cmdNoCase == 'q')
                     {
-                        var p1 = bs.P1;
+                        lastQCtrlPoint = bs.P1;
                         var t = 2.0f/3.0f;
-                        bs.P1 = bs.P0 + t * (p1 - bs.P0);
-                        bs.P2 = bs.P3 + t * (p1 - bs.P3);
+                        bs.P1 = bs.P0 + t * (lastQCtrlPoint - bs.P0);
+                        bs.P2 = bs.P3 + t * (lastQCtrlPoint - bs.P3);
                     }
 
                     penPos = bs.P3;
@@ -2680,7 +2681,7 @@ namespace Unity.VectorGraphics
                 {
                     Vector2 reflectedP1 = penPos;
                     if (currentContour.Count > 0 && (lastCmdNoCase == 'c' || lastCmdNoCase == 'q' || lastCmdNoCase == 's' || lastCmdNoCase == 't'))
-                        reflectedP1 += currentContour.Last.Value.P3 - currentContour.Last.Value.P2;
+                        reflectedP1 += currentContour.Last.Value.P3 - ((lastCmdNoCase == 'q' || lastCmdNoCase == 't') ? lastQCtrlPoint : currentContour.Last.Value.P2);
 
                     // If relative, the pen position is on P0 and is only moved to P3
                     BezierSegment bs = new BezierSegment();
@@ -2692,10 +2693,10 @@ namespace Unity.VectorGraphics
 
                     if (cmdNoCase == 't')
                     {
-                        var p1 = bs.P1;
+                        lastQCtrlPoint = bs.P1;
                         var t = 2.0f / 3.0f;
-                        bs.P1 = bs.P0 + t * (p1 - bs.P0);
-                        bs.P2 = bs.P3 + t * (p1 - bs.P3);
+                        bs.P1 = bs.P0 + t * (lastQCtrlPoint - bs.P0);
+                        bs.P2 = bs.P3 + t * (lastQCtrlPoint - bs.P3);
                     }
 
                     penPos = bs.P3;

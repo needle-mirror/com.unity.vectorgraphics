@@ -176,7 +176,9 @@ namespace Unity.VectorGraphics.Editor
                         m_TextureScale = kMinTextureSize / maxSize;
                     }
 
-                    m_PreviewTexture = VectorUtils.RenderSpriteToTexture2D(sprite, (int)(size.x * m_TextureScale), (int)(size.y * m_TextureScale), SVGImporter.GetSVGSpriteMaterial(sprite), 4);
+                    var mat = SVGImporter.CreateSVGSpriteMaterial(sprite);
+                    m_PreviewTexture = VectorUtils.RenderSpriteToTexture2D(sprite, (int)(size.x * m_TextureScale), (int)(size.y * m_TextureScale), mat, 4);
+                    Material.DestroyImmediate(mat);
                 }
                 return m_PreviewTexture;
             }
@@ -208,7 +210,7 @@ namespace Unity.VectorGraphics.Editor
                 {
                     var sprite = GetSprite();
                     var size = ((Vector2)sprite.bounds.size) * sprite.pixelsPerUnit;
-                    m_ReadableTexture = VectorUtils.RenderSpriteToTexture2D(sprite, (int)size.x, (int)size.y, SVGImporter.GetSVGSpriteMaterial(sprite), 4);
+                    m_ReadableTexture = VectorUtils.RenderSpriteToTexture2D(sprite, (int)size.x, (int)size.y, SVGImporter.CreateSVGSpriteMaterial(sprite), 4);
                 }
                 else
                 {

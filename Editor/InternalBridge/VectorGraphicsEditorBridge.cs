@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -10,7 +11,7 @@ using UnityEngine.U2D.Interface;
 
 namespace Unity.VectorGraphics.Editor
 {
-    internal static class InternalBridge
+    internal static class InternalEditorBridge
     {
         internal static void ShowSpriteEditorWindow()
         {

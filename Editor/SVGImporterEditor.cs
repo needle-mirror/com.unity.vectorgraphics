@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using Unity.Collections;
 using UnityEngine;
@@ -78,13 +79,19 @@ namespace Unity.VectorGraphics.Editor
             new GUIContent("Vector Sprite", "A tessellated sprite with \"infinite\" resolution."),
             new GUIContent("Textured Sprite", "A textured sprite."),
             new GUIContent("Texture2D", "A normal texture."),
+#if UNITY_2019_3_OR_NEWER
+            new GUIContent("UIElements Vector Image", "A vector image that can be used by UIElements.")
+#endif
         };
 
         private readonly int[] svgTypeValues =
         {
             (int)SVGType.VectorSprite,
             (int)SVGType.TexturedSprite,
-            (int)SVGType.Texture2D
+            (int)SVGType.Texture2D,
+#if UNITY_2019_3_OR_NEWER
+            (int)SVGType.UIElement
+#endif
         };
 
         private readonly GUIContent[] viewportOptions =
@@ -226,7 +233,13 @@ namespace Unity.VectorGraphics.Editor
             serializedObject.UpdateIfRequiredOrScript();
             #endif
 
+            #if UNITY_2019_3_OR_NEWER
+            if (m_SVGType.intValue != (int)SVGType.UIElement)
+                PropertyField(m_PixelsPerUnit, m_PixelsPerUnitText);
+            #else
             PropertyField(m_PixelsPerUnit, m_PixelsPerUnitText);
+            #endif
+            
             PropertyField(m_GradientResolution, m_GradientResolutionText);
             IntPopup(m_Alignment, m_AlignmentText, m_AlignmentOptions);
 
@@ -332,7 +345,7 @@ namespace Unity.VectorGraphics.Editor
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Sprite Editor"))
                 {
-                    InternalBridge.ShowSpriteEditorWindow();
+                    InternalEditorBridge.ShowSpriteEditorWindow();
                     // var spriteWindow = Type.GetType("UnityEditor.SpriteEditorWindow, UnityEditor", true);
                     // var getWindowMethod = spriteWindow.GetMethod("GetWindow", BindingFlags.Public | BindingFlags.Static);
                     // getWindowMethod.Invoke(null, null);
@@ -435,11 +448,10 @@ namespace Unity.VectorGraphics.Editor
 
         public override Texture2D RenderStaticPreview(string assetPath, UnityEngine.Object[] subAssets, int width, int height)
         {
-            var sprite = SVGImporter.GetImportedSprite(assetTarget);
-            if (sprite == null)
-                return null;
-
-            return BuildPreviewTexture(sprite, width, height);
+            var obj = AssetDatabase.LoadMainAssetAtPath(assetPath);
+            if (obj != null)
+                return BuildPreviewTexture(obj, width, height);
+            return null;
         }
 
         public override void OnPreviewGUI(Rect r, GUIStyle background)
@@ -449,29 +461,85 @@ namespace Unity.VectorGraphics.Editor
 
             background.Draw(r, false, false, false, false);
 
+            Texture2D previewTex = null;
+            var sourceSize = Vector2.zero;
+
+            #if UNITY_2019_3_OR_NEWER
+            UnityEngine.Object vectorImage = null;
+            Texture2D vectorImageAtlas = null;
+            #endif
+
             var sprite = SVGImporter.GetImportedSprite(assetTarget);
             if (sprite == null)
             {
                 if (assetTarget is Texture2D)
+                {
                     EditorGUI.DrawTextureTransparent(r, (Texture2D)assetTarget, ScaleMode.ScaleToFit, 0.0f, 0);
-                return;
+                    return;
+                }
+                #if UNITY_2019_3_OR_NEWER
+                Vector2[] vertices = null;
+                UInt16[] indices = null;
+                Vector2[] uvs = null;
+                Color[] colors = null;
+                Vector2[] settings = null;
+                Texture2D atlas = null;
+                Vector2 size = Vector2.zero;
+                if (InternalBridge.GetDataFromVectorImage(assetTarget, ref vertices, ref indices, ref uvs, ref colors, ref settings, ref atlas, ref size))
+                {
+                    vectorImage = assetTarget;
+                    vectorImageAtlas = atlas;
+                    sourceSize = size;
+                }
+                #endif
+            }
+            else
+            {
+                sourceSize = sprite.rect.size;
             }
 
-            float zoomLevel = Mathf.Min(r.width / sprite.rect.width, r.height / sprite.rect.height);
-            Rect wantedRect = new Rect(r.x, r.y, sprite.rect.width * zoomLevel, sprite.rect.height * zoomLevel);
+            float zoomLevel = Mathf.Min(r.width / sourceSize.x, r.height / sourceSize.y);
+            Rect wantedRect = new Rect(r.x, r.y, sourceSize.x * zoomLevel, sourceSize.y * zoomLevel);
             wantedRect.center = r.center;
 
-            var previewTex = BuildPreviewTexture(sprite, (int)wantedRect.width, (int)wantedRect.height);
+            previewTex = BuildPreviewTexture(assetTarget, (int)wantedRect.width, (int)wantedRect.height);
             if (previewTex != null)
             {
                 EditorGUI.DrawTextureTransparent(r, previewTex, ScaleMode.ScaleToFit);
-                UnityEngine.Object.DestroyImmediate(previewTex);
+                Texture2D.DestroyImmediate(previewTex);
             }
         }
 
-        internal static Texture2D BuildPreviewTexture(Sprite sprite, int width, int height)
+        internal static Texture2D BuildPreviewTexture(UnityEngine.Object obj, int width, int height)
         {
-            return VectorUtils.RenderSpriteToTexture2D(sprite, width, height, SVGImporter.GetSVGSpriteMaterial(sprite), 4);
+            Texture2D previewTex = null;
+
+            var sprite = SVGImporter.GetImportedSprite(obj);
+            if (sprite != null)
+            {
+                var mat = SVGImporter.CreateSVGSpriteMaterial(sprite);
+                previewTex = VectorUtils.RenderSpriteToTexture2D(sprite, width, height, mat, 4);
+                Material.DestroyImmediate(mat);
+            }
+#if UNITY_2019_3_OR_NEWER
+            else
+            {
+                Vector2[] vertices = null;
+                UInt16[] indices = null;
+                Vector2[] uvs = null;
+                Color[] colors = null;
+                Vector2[] settings = null;
+                Texture2D atlas = null;
+                Vector2 size = Vector2.zero;
+                if (InternalBridge.GetDataFromVectorImage(obj, ref vertices, ref indices, ref uvs, ref colors, ref settings, ref atlas, ref size))
+                {
+                    var mat = SVGImporter.CreateSVGSpriteMaterial(atlas != null);
+                    previewTex = InternalBridge.RenderVectorImageToTexture2D(obj, width, height, mat, 4);
+                    Material.DestroyImmediate(mat);
+                }
+            }
+#endif
+            return previewTex;
         }
 
         public override string GetInfoString()
@@ -482,7 +550,7 @@ namespace Unity.VectorGraphics.Editor
                 var tex = assetTarget as Texture2D;
                 if (tex == null)
                     return "";
-                return InternalBridge.GetTextureInfoString(tex);
+                return InternalEditorBridge.GetTextureInfoString(tex);
             }
             
             int vertexCount = sprite.vertices.Length;

@@ -191,7 +191,7 @@ namespace Unity.VectorGraphics
             }
         }
 
-        static void WriteRawInt2Packed(RawTexture dest, int v0, int v1, int destX, int destY)
+        internal static void WriteRawInt2Packed(RawTexture dest, int v0, int v1, int destX, int destY)
         {
             byte r = (byte)(v0/255);
             byte g = (byte)(v0-r*255);
@@ -201,13 +201,18 @@ namespace Unity.VectorGraphics
             dest.Rgba[offset] = new Color32(r, g, b, a);
         }
 
-        static void WriteRawFloat4Packed(RawTexture dest, float f0, float f1, float f2, float f3, int destX, int destY)
+        internal static void WriteRawFloat4Packed(RawTexture dest, float f0, float f1, float f2, float f3, int destX, int destY)
         {
             byte r = (byte)(f0*255.0f+0.5f);
             byte g = (byte)(f1*255.0f+0.5f);
             byte b = (byte)(f2*255.0f+0.5f);
             byte a = (byte)(f3*255.0f+0.5f);
             int offset = destY * dest.Width + destX;
+            if (offset >= dest.Rgba.Length)
+            {
+                int x = 0;
+                ++x;
+            }
             dest.Rgba[offset] = new Color32(r, g, b, a);
         }
     }

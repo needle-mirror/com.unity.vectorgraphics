@@ -1,5 +1,15 @@
 # Change log
 
+## [2.0.0-preview.3] - 2019-06-26
+
+### Changes
+
+* Added a new asset import type (UIElements Vector Image) for upcoming UIElements support in Unity 2019.3.
+
+### Fixes
+
+* Fixed 'T' path instruction not computing the proper reflected control point
+
 ## [2.0.0-preview.2] - 2019-06-18
 
 ### Changes

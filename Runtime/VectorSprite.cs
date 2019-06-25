@@ -219,6 +219,43 @@ namespace Unity.VectorGraphics
             }
         }
 
+        internal enum WindingDir
+        {
+            CW,
+            CCW
+        }
+
+        internal static void AdjustWinding(Vector2[] vertices, UInt16[] indices, WindingDir dir)
+        {
+            bool shouldFlip = false;
+            var length = indices.Length;
+            for (int i = 0; i < (length - 2); i += 3)
+            {
+                var v0 = (Vector3)vertices[indices[i]];
+                var v1 = (Vector3)vertices[indices[i+1]];
+                var v2 = (Vector3)vertices[indices[i+2]];
+                var s = (v1 - v0).normalized;
+                var t = (v2 - v0).normalized;
+                float dot = Vector3.Dot(s, t);
+                if (s == Vector3.zero || t == Vector3.zero || dot > 0.9999f || dot < -0.9999f)
+                    continue;
+                var n = Vector3.Cross(s, t);
+                if (n.sqrMagnitude < 0.0001f)
+                    continue;
+                shouldFlip = dir == WindingDir.CCW ? n.z < 0.0f : n.z > 0.0f;
+                break;
+            }
+            if (shouldFlip)
+            {
+                for (int i = 0; i < (length - 2); i += 3)
+                {
+                    var tmp = indices[i];
+                    indices[i] = indices[i+1];
+                    indices[i+1] = tmp;
+                }
+            }
+        }
+
         private static void FlipRangeIfNecessary(List<Vector2> vertices, List<UInt16> indices, int indexStart, int indexEnd, bool flipYAxis)
         {
             // For the range, find the first valid triangle and check its winding order. If that triangle needs flipping, then flip the whole range.
@@ -250,6 +287,39 @@ namespace Unity.VectorGraphics
             }
         }
 
+        internal static void RenderFromArrays(Vector2[] vertices, UInt16[] indices, Vector2[] uvs, Color[] colors, Vector2[] settings, Texture2D texture, Material mat, bool clear = true)
+        {
+            mat.SetTexture("_MainTex", texture);
+            mat.SetPass(0);
+
+            if (clear)
+                GL.Clear(true, true, Color.clear);
+
+            GL.PushMatrix();
+            GL.LoadOrtho();
+            GL.Color(new Color(1, 1, 1, 1));
+            GL.Begin(GL.TRIANGLES);
+            for (int i = 0; i < indices.Length; ++i)
+            {
+                ushort index = indices[i];
+                Vector2 vertex = vertices[index];
+                Vector2 uv = uvs[index];
+                GL.TexCoord2(uv.x, uv.y);
+                if (settings != null)
+                {
+                    var setting = settings[index];
+                    GL.MultiTexCoord2(2, setting.x, setting.y);
+                }
+                if (colors != null)
+                    GL.Color(colors[index]);
+                GL.Vertex3(vertex.x, vertex.y, 0);
+            }
+            GL.End();
+            GL.PopMatrix();
+
+            mat.SetTexture("_MainTex", null);
+        }
+
         /// <summary>Draws a vector sprite using the provided material.</summary>
         /// <param name="sprite">The sprite to render</param>
         /// <param name="mat">The material used for rendering</param>
@@ -260,50 +330,24 @@ namespace Unity.VectorGraphics
             float spriteHeight = sprite.rect.height;
             float pixelsToUnits = sprite.rect.width / sprite.bounds.size.x;
 
-            var vertices = sprite.vertices;
             var uvs = sprite.uv;
             var triangles = sprite.triangles;
             var pivot = sprite.pivot;
 
-            NativeSlice<Color32>? colors = null;
+            var vertices = sprite.vertices.Select(v => 
+                new Vector2((v.x * pixelsToUnits + pivot.x)/spriteWidth,
+                            (v.y * pixelsToUnits + pivot.y)/spriteHeight)
+            ).ToArray();
+
+            Color[] colors = null;
             if (sprite.HasVertexAttribute(VertexAttribute.Color))
-                colors = sprite.GetVertexAttribute<Color32>(VertexAttribute.Color);
+                colors = sprite.GetVertexAttribute<Color32>(VertexAttribute.Color).Select(c => (Color)c).ToArray();
 
-            NativeSlice<Vector2>? settings = null;
+            Vector2[] settings = null;
             if (sprite.HasVertexAttribute(VertexAttribute.TexCoord2))
-                settings = sprite.GetVertexAttribute<Vector2>(VertexAttribute.TexCoord2);
+                settings = sprite.GetVertexAttribute<Vector2>(VertexAttribute.TexCoord2).ToArray();
 
-            mat.SetTexture("_MainTex", sprite.texture);
-            mat.SetPass(0);
-
-            if (clear)
-                GL.Clear(true, true, Color.clear);
-
-            GL.PushMatrix();
-            GL.LoadOrtho();
-            GL.Color(new Color(1, 1, 1, 1));
-            GL.Begin(GL.TRIANGLES);
-            for (int i = 0; i < triangles.Length; ++i)
-            {
-                ushort index = triangles[i];
-                Vector2 vertex = vertices[index];
-                Vector2 uv = uvs[index];
-                GL.TexCoord2(uv.x, uv.y);
-                if (settings != null)
-                {
-                    var setting = settings.Value[index];
-                    GL.MultiTexCoord2(2, setting.x, setting.y);
-                }
-                if (colors != null)
-                {
-                    GL.Color(colors.Value[index]);
-                }
-                GL.Vertex3((vertex.x * pixelsToUnits + pivot.x) / spriteWidth, (vertex.y * pixelsToUnits + pivot.y) / spriteHeight, 0);
-            }
-            GL.End();
-            GL.PopMatrix();
-
-            mat.SetTexture("_MainTex", null);
+            RenderFromArrays(vertices, sprite.triangles, sprite.uv, colors, settings, sprite.texture, mat, clear);
         }
 
         private static Material s_ExpandEdgesMat;
@@ -326,7 +370,7 @@ namespace Unity.VectorGraphics
 
             var desc = new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32, 0) {
                 msaaSamples = 1,
-                sRGB = true
+                sRGB = QualitySettings.activeColorSpace == ColorSpace.Linear
             };
 
             if (expandEdges)
