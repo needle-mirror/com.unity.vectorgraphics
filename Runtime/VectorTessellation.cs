@@ -211,6 +211,9 @@ namespace Unity.VectorGraphics
             if (!patternIt.IsSolidAt(pathIt.LengthSoFar + segmentLengths[pathIt.CurrentSegment]))
                 return; // The joining center falls outside the pattern, so don't join... period
 
+            if (pathIt.Closed && pathIt.Segments.Count <= 2)
+                return; // Not enough segments to do proper closing
+
             if (pathIt.Closed)
             {
                 JoiningInfo closing;

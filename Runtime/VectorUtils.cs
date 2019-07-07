@@ -71,7 +71,7 @@ namespace Unity.VectorGraphics
         /// <returns>The BezierSegment at the given index</returns>
         public static BezierSegment PathSegmentAtIndex(IList<BezierPathSegment> path, int index)
         {
-            if (index < 0 || index >= path.Count)
+            if (index < 0 || index >= (path.Count-1))
                 throw new IndexOutOfRangeException("Invalid index passed to PathSegmentAtIndex");
 
             return new BezierSegment() { P0 = path[index].P0, P1 = path[index].P1, P2 = path[index].P2, P3 = path[index + 1].P0 };
