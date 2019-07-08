@@ -1,5 +1,12 @@
 # Change log
 
+## [1.0.0-preview.28] - 2019-07-09
+
+### Fixes
+
+* Fixed ArgumentOutOfRangeException when closing paths with not enough segments
+* Fixed textured-sprite import issue after a full project reimport
+
 ## [1.0.0-preview.27] - 2019-06-25
 
 ### Fixes

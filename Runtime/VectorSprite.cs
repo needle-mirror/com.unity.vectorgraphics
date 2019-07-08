@@ -336,7 +336,21 @@ namespace Unity.VectorGraphics
 
                 // Expand the edges and make completely transparent
                 if (s_ExpandEdgesMat == null)
-                    s_ExpandEdgesMat = new Material(Shader.Find("Hidden/VectorExpandEdges"));
+                {
+                    var shader = Shader.Find("Hidden/VectorExpandEdges");
+                    if (shader == null)
+                    {
+#if UNITY_EDITOR
+                        // Workaround for case 1167309.
+                        // Shader.Find() seems to fail on the package shader when doing a fresh import with a clean Library folder,
+                        // but AssetDatabase.LoadAssetAtPath() works fine though.
+                        shader = UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>("Packages/com.unity.vectorgraphics/Runtime/Materials/VectorExpandEdges.shader");
+#else
+                        return null;
+#endif
+                    }
+                    s_ExpandEdgesMat = new Material(shader);
+                }
 
                 var expandTex = RenderTexture.GetTemporary(desc);
                 RenderTexture.active = expandTex;
