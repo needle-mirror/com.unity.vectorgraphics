@@ -1,0 +1,7 @@
+﻿{
+	"name": "Unity.VectorGraphics.Editor",
+    "references": [
+        "Unity.VectorGraphics"
+    ],
+	"includePlatforms": [ "Editor" ]
+}
