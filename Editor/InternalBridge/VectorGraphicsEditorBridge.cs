@@ -6,7 +6,9 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.U2D;
 using UnityEditor.U2D.Interface;
+#if !(UNITY_2019_3_OR_NEWER)
 using UnityEditor.Experimental.U2D;
+#endif
 using UnityEngine.U2D.Interface;
 
 namespace Unity.VectorGraphics.Editor

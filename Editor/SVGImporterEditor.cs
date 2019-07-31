@@ -8,6 +8,7 @@ using Unity.Collections;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.Experimental.AssetImporters;
+using UnityEngine.U2D;
 using UnityEngine.Experimental.U2D;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;

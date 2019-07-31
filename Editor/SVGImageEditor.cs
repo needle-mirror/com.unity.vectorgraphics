@@ -16,7 +16,9 @@ using UnityEngine.UI;
 public class SVGImageEditor : GraphicEditor
 {
     SerializedProperty m_Sprite;
+    SerializedProperty m_PreserveAspect;
     GUIContent m_SpriteContent;
+    GUIContent m_PreserveAspectContent;
 
     protected override void OnEnable()
     {
@@ -24,6 +26,9 @@ public class SVGImageEditor : GraphicEditor
 
         m_SpriteContent = new GUIContent("Source SVG Image");
         m_Sprite = serializedObject.FindProperty("m_Sprite");
+
+        m_PreserveAspectContent = new GUIContent("Preserve Aspect");
+        m_PreserveAspect = serializedObject.FindProperty("m_PreserveAspect");
     }
 
 
@@ -34,6 +39,7 @@ public class SVGImageEditor : GraphicEditor
         EditorGUILayout.PropertyField(m_Sprite, m_SpriteContent);
         AppearanceControlsGUI();
         RaycastControlsGUI();       
+        EditorGUILayout.PropertyField(m_PreserveAspect, m_PreserveAspectContent);
 
         serializedObject.ApplyModifiedProperties();
     }

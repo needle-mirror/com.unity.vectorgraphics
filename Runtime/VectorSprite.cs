@@ -6,7 +6,10 @@ using System.Linq;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.U2D;
+#if !(UNITY_2019_3_OR_NEWER)
 using UnityEngine.Experimental.U2D;
+#endif
 using UnityEngine.Experimental.Rendering;
 
 namespace Unity.VectorGraphics

@@ -6,8 +6,10 @@ using System.IO;
 using Unity.Collections;
 using UnityEngine;
 using UnityEditor;
-using UnityEditor.Experimental.U2D;
 using UnityEngine.Experimental.U2D;
+#if !(UNITY_2019_3_OR_NEWER)
+using UnityEditor.Experimental.U2D;
+#endif
 using UnityEditor.U2D.Sprites;
 
 namespace Unity.VectorGraphics.Editor

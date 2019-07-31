@@ -7,7 +7,11 @@ using System.Linq;
 using Unity.Collections;
 using UnityEngine;
 using UnityEditor;
+#if UNITY_2019_3_OR_NEWER
+using UnityEditor.U2D;
+#else
 using UnityEditor.Experimental.U2D;
+#endif
 using UnityEngine.Experimental.U2D;
 using UnityEditor.Experimental.AssetImporters;
 using UnityEngine.Experimental.Rendering;
@@ -372,7 +376,10 @@ namespace Unity.VectorGraphics.Editor
 
             var tex = BuildTexture(sprite, name);
             var rect = new Rect(0, 0, tex.width, tex.height);
-            var pivot = VectorUtils.GetPivot(Alignment, CustomPivot, rect, false);
+
+            // The pivot of the orignial sprite was properly computed, just translate it to the new textured sprite
+            var pivot = sprite.pivot;
+            pivot /= sprite.rect.size;
 
             var texturedSprite = Sprite.Create(tex, rect, pivot, SvgPixelsPerUnit, 0, TexturedSpriteMeshType, m_SpriteData.SpriteRect.border);
             texturedSprite.name = name;
