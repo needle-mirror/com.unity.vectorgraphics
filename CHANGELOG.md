@@ -1,5 +1,12 @@
 # Change log
 
+## [1.0.0-preview.29] - 2019-08-01
+
+### Fixes
+
+* Fixed pivot wrongly computed on textured sprites when SVG origin alignement is selected (case 1172332)
+* Added preserve aspect ratio in SVGImage
+
 ## [1.0.0-preview.28] - 2019-07-09
 
 ### Fixes

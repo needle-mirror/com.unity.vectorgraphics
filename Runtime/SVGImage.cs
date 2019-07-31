@@ -14,6 +14,17 @@ public class SVGImage : MaskableGraphic
 {
     [SerializeField] private Sprite m_Sprite = null;
 
+    [SerializeField] private bool m_PreserveAspect = false;
+    public bool preserveAspect {
+        get { return m_PreserveAspect; }
+        set {
+            if (m_PreserveAspect != value) {
+                m_PreserveAspect = value;
+                SetVerticesDirty();
+            }
+        }
+    }
+
     /// <summary>
     /// The sprite that is used to render this image.
     /// </summary>
@@ -72,8 +83,7 @@ public class SVGImage : MaskableGraphic
         // Covert sprite pivot into normalized space.
         var spritePivot = sprite.pivot / spriteSize;
         var rectPivot = rectTransform.pivot;
-        Rect r = GetPixelAdjustedRect();
-        var drawingSize = new Vector2(r.width, r.height);
+        var drawingSize = GetDrawingDimensions(m_PreserveAspect);
         var spriteBoundSize = sprite.bounds.size;
 
         // Calculate the drawing offset based on the difference between the two pivots.
@@ -112,4 +122,27 @@ public class SVGImage : MaskableGraphic
             vh.AddTriangle(triangles[i + 0], triangles[i + 1], triangles[i + 2]);
         }
     }
+
+    private Vector2 GetDrawingDimensions(bool shouldPreserveAspect)
+    {
+         var size = new Vector2(sprite.rect.width, sprite.rect.height);
+
+         Rect r = GetPixelAdjustedRect();
+
+         int spriteW = Mathf.RoundToInt(size.x);
+         int spriteH = Mathf.RoundToInt(size.y);
+
+         if (shouldPreserveAspect && size.sqrMagnitude > 0.0f)
+         {
+             var spriteRatio = size.x / size.y;
+             var rectRatio = r.width / r.height;
+
+             if (spriteRatio > rectRatio)
+                 r.height = r.width * (1.0f / spriteRatio);
+             else
+                 r.width = r.height * spriteRatio;
+         }
+
+        return r.size;
+     }
 }

@@ -55,7 +55,8 @@ public class UtilsTests
     [Test]
     public void RenderSpriteToTexture2D_CreatesTexture2DWithProperSize()
     {
-        var mat = new Material(Shader.Find("Unlit/Vector"));
+        var shader = Shader.Find("Unlit/Color");
+        var mat = new Material(shader);
         var sprite = VectorUtils.BuildSprite(BuildGeoms(), 100.0f, VectorUtils.Alignment.BottomLeft, Vector2.zero, 128);
         var tex = VectorUtils.RenderSpriteToTexture2D(sprite, 100, 50, mat);
         Assert.NotNull(tex);
