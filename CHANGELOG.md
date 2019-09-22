@@ -1,5 +1,15 @@
 # Change log
 
+## [2.0.0-preview.6] - 2019-09-23
+
+### Changes
+
+* Changed default gradient resolution from 128 -> 64 pixels to help batching with UIElements renderer
+
+### Fixes
+
+* Using serializable VectorImageVertex (only works on 2019.3b4 and later)
+
 ## [2.0.0-preview.5] - 2019-08-01
 
 ### Fixes

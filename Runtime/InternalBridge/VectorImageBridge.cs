@@ -20,7 +20,7 @@ namespace Unity.VectorGraphics
             bool hasTexture = atlas != null && atlas.Texture != null;
             outTexAtlas = hasTexture ? atlas.Texture : null;
 
-            var vertices = new List<Vertex>(100);
+            var vertices = new List<VectorImageVertex>(100);
             var indices = new List<UInt16>(300);
             var settings = new List<GradientSettings>();
 
@@ -81,11 +81,11 @@ namespace Unity.VectorGraphics
                 {
                     Vector3 p = (Vector3)geom.Vertices[i];
                     p.z = Vertex.nearZ;
-                    vertices.Add(new Vertex() {
+                    vertices.Add(new VectorImageVertex() {
                         position = p,
                         uv = hasTexture ? geom.UVs[i] : Vector2.zero,
                         tint = geom.Color,
-                        settingIndex = geom.SettingIndex
+                        settingIndex = (uint)geom.SettingIndex
                     });
                 }
 

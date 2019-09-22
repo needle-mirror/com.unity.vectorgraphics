@@ -71,7 +71,7 @@ namespace Unity.VectorGraphics.Editor
             get { return m_GradientResolution; }
             set { m_GradientResolution = value; }
         }
-        [SerializeField] private UInt16 m_GradientResolution = 128;
+        [SerializeField] private UInt16 m_GradientResolution = 64;
 
         /// <summary>The SVG sprite alignement.</summary>
         public VectorUtils.Alignment Alignment {
