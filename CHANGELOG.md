@@ -1,5 +1,11 @@
 # Change log
 
+## [2.0.0-preview.7] - 2019-10-24
+
+### Changes
+
+* Gradient support for strokes
+
 ## [2.0.0-preview.6] - 2019-09-23
 
 ### Changes

@@ -160,6 +160,14 @@ namespace Unity.VectorGraphics
             var stroke = vectorShape.PathProps.Stroke;
             if (stroke != null && stroke.HalfThickness > VectorUtils.Epsilon)
             {
+                var strokeFill = stroke.Fill;
+                Color strokeColor = Color.white;
+                if (strokeFill is SolidFill)
+                {
+                    strokeColor = ((SolidFill)strokeFill).Color;
+                    strokeFill = null;
+                }
+
                 foreach (var c in vectorShape.Contours)
                 {
                     Vector2[] strokeVerts;
@@ -167,7 +175,7 @@ namespace Unity.VectorGraphics
                     VectorUtils.TessellatePath(c, vectorShape.PathProps, tessellationOptions, out strokeVerts, out strokeIndices);
                     if (strokeIndices.Length > 0)
                     {
-                        geoms.Add(new Geometry() { Vertices = strokeVerts, Indices = strokeIndices, Color = vectorShape.PathProps.Stroke.Color });
+                        geoms.Add(new Geometry() { Vertices = strokeVerts, Indices = strokeIndices, Color = strokeColor, Fill = strokeFill, FillTransform = stroke.FillTransform });
                     }
                 }
             }
@@ -245,26 +253,6 @@ namespace Unity.VectorGraphics
             if (indices.Count() > 0)
             {
                 geoms.Add(new Geometry() { Vertices = vertices.ToArray(), Indices = indices.ToArray(), Color = color, Fill = vectorShape.Fill, FillTransform = vectorShape.FillTransform });
-            }
-
-            UnityEngine.Profiling.Profiler.EndSample();
-        }
-
-        private static void TessellatePath(BezierContour contour, PathProperties pathProps, List<Geometry> geoms, TessellationOptions tessellationOptions)
-        {
-            UnityEngine.Profiling.Profiler.BeginSample("TessellatePath");
-
-            if (pathProps.Stroke != null)
-            {
-                Vector2[] vertices;
-                UInt16[] indices;
-                VectorUtils.TessellatePath(contour, pathProps, tessellationOptions, out vertices, out indices);
-
-                var color = pathProps.Stroke.Color;
-                if (indices.Length > 0)
-                {
-                    geoms.Add(new Geometry() { Vertices = vertices, Indices = indices, Color = color });
-                }
             }
 
             UnityEngine.Profiling.Profiler.EndSample();
