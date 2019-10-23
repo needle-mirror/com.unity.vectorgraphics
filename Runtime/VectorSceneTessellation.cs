@@ -226,6 +226,14 @@ namespace Unity.VectorGraphics
             var stroke = vectorShape.PathProps.Stroke;
             if (stroke != null && stroke.HalfThickness > VectorUtils.Epsilon)
             {
+                var strokeFill = stroke.Fill;
+                Color strokeColor = Color.white;
+                if (strokeFill is SolidFill)
+                {
+                    strokeColor = ((SolidFill)strokeFill).Color;
+                    strokeFill = null;
+                }
+
                 foreach (var c in vectorShape.Contours)
                 {
                     Vector2[] strokeVerts;
@@ -233,7 +241,7 @@ namespace Unity.VectorGraphics
                     VectorUtils.TessellatePath(c, vectorShape.PathProps, tessellationOptions, out strokeVerts, out strokeIndices);
                     if (strokeIndices.Length > 0)
                     {
-                        geoms.Add(new Geometry() { Vertices = strokeVerts, Indices = strokeIndices, Color = vectorShape.PathProps.Stroke.Color });
+                        geoms.Add(new Geometry() { Vertices = strokeVerts, Indices = strokeIndices, Color = strokeColor, Fill = strokeFill, FillTransform = stroke.FillTransform });
                     }
                 }
             }

@@ -218,7 +218,23 @@ namespace Unity.VectorGraphics
     public class Stroke
     {
         /// <summary>The stroke color.</summary>
-        public Color Color { get; set; }
+        public Color Color {
+            get {
+                var solidFill = Fill as SolidFill;
+                if (solidFill == null) return new Color();
+                return solidFill.Color;
+            }
+            set {
+                Fill = new SolidFill() { Color = value };
+            }
+        }
+
+        /// <summary>The stroke fill.</summary>
+        public IFill Fill { get; set; }
+
+        /// <summary>A transformation specific to the fill.</summary>
+        public Matrix2D FillTransform { get { return m_FillTransform; } set { m_FillTransform = value; } }
+        private Matrix2D m_FillTransform = Matrix2D.identity;
 
         /// <summary>The stroke half-thickness.</summary>
         public float HalfThickness { get; set; }

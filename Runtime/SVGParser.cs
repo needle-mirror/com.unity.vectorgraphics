@@ -1424,7 +1424,8 @@ namespace Unity.VectorGraphics
                         pattern[i] = props.Stroke.Pattern[i];
                 }
                 stroke = new Stroke() {
-                    Color = props.Stroke.Color,
+                    Fill = CloneFill(props.Stroke.Fill),
+                    FillTransform = props.Stroke.FillTransform,
                     HalfThickness = props.Stroke.HalfThickness,
                     Pattern = pattern,
                     PatternOffset = props.Stroke.PatternOffset,
@@ -1871,9 +1872,19 @@ namespace Unity.VectorGraphics
                         }
                     }
 
+                    var stroke = shape.PathProps.Stroke;
+                    if (stroke != null && stroke.Fill is GradientFill)
+                    {
+                        var fillTransform = Matrix2D.identity;
+                        AdjustGradientFill(nodeInfo.Node, nodeInfo.WorldTransform, stroke.Fill, shape.Contours, ref fillTransform);
+                        stroke.FillTransform = fillTransform;
+                    }
+
                     if (shape.Fill is GradientFill)
                     {
-                        AdjustGradientFill(nodeInfo.Node, nodeInfo.WorldTransform, shape);
+                        var fillTransform = Matrix2D.identity;
+                        AdjustGradientFill(nodeInfo.Node, nodeInfo.WorldTransform, shape.Fill, shape.Contours, ref fillTransform);
+                        shape.FillTransform = fillTransform;
                     }
                     else if (shape.Fill is PatternFill)
                     {
@@ -1899,15 +1910,15 @@ namespace Unity.VectorGraphics
             }
         }
 
-        void AdjustGradientFill(SceneNode node, Matrix2D worldTransform, Shape shape)
+        void AdjustGradientFill(SceneNode node, Matrix2D worldTransform, IFill fill, BezierContour[] contours, ref Matrix2D computedTransform)
         {
-            GradientFill fill = shape.Fill as GradientFill;
-            if (fill == null || shape.Contours == null)
+            var gradientFill = fill as GradientFill;
+            if (fill == null || contours == null || contours.Length == 0)
                 return;
 
             var min = new Vector2(float.MaxValue, float.MaxValue);
             var max = new Vector2(-float.MaxValue, -float.MaxValue);
-            foreach (var contour in shape.Contours)
+            foreach (var contour in contours)
             {
                 var bbox = VectorUtils.Bounds(contour.Segments);
                 min = Vector2.Min(min, bbox.min);
@@ -1916,7 +1927,7 @@ namespace Unity.VectorGraphics
 
             Rect bounds = new Rect(min, max - min);
 
-            GradientExData extInfo = (GradientExData)gradientExInfo[fill];
+            GradientExData extInfo = (GradientExData)gradientExInfo[gradientFill];
             var containerSize = nodeGlobalSceneState[node].ContainerSize;
             Matrix2D gradTransform = Matrix2D.identity;
 
@@ -1971,9 +1982,9 @@ namespace Unity.VectorGraphics
                 if (!radGradEx.Parsed)
                 {
                     // VectorGradientFill radialFocus is (-1,1) relative to the outer circle
-                    fill.RadialFocus = (focus - center) / radius;
-                    if (fill.RadialFocus.sqrMagnitude > 1.0f - VectorUtils.Epsilon)
-                        fill.RadialFocus = fill.RadialFocus.normalized * (1.0f - VectorUtils.Epsilon); // Stick within the unit circle
+                    gradientFill.RadialFocus = (focus - center) / radius;
+                    if (gradientFill.RadialFocus.sqrMagnitude > 1.0f - VectorUtils.Epsilon)
+                        gradientFill.RadialFocus = gradientFill.RadialFocus.normalized * (1.0f - VectorUtils.Epsilon); // Stick within the unit circle
 
                     radGradEx.Parsed = true;
                 }
@@ -1991,7 +2002,7 @@ namespace Unity.VectorGraphics
 
             var uvToWorld = extInfo.WorldRelative ? Matrix2D.Translate(bounds.min) * Matrix2D.Scale(bounds.size) : Matrix2D.identity;
             var boundsInv = new Vector2(1.0f / bounds.width, 1.0f / bounds.height);
-            shape.FillTransform = Matrix2D.Scale(boundsInv) * gradTransform * extInfo.FillTransform.Inverse() * uvToWorld;
+            computedTransform = Matrix2D.Scale(boundsInv) * gradTransform * extInfo.FillTransform.Inverse() * uvToWorld;
         }
 
         SceneNode AdjustPatternFill(SceneNode node, Matrix2D worldTransform, Shape shape)
@@ -2499,12 +2510,8 @@ namespace Unity.VectorGraphics
 
             if (strokeFill == null)
                 return null;
-            if (!(strokeFill is SolidFill))
-                throw node.GetException("stroke fills other that a solid color are not supported yet");
 
-            Stroke stroke = new Stroke();
-            stroke.Color = ((SolidFill)strokeFill).Color;
-            return stroke;
+            return new Stroke() { Fill = strokeFill };
         }
 
         public static Color ParseColor(string colorString)
