@@ -37,13 +37,8 @@ using System.Diagnostics;
 namespace Unity.VectorGraphics.External
 {
 
-#if DOUBLE
-using Real = System.Double;
-namespace LibTessDotNet.Double
-#else
 using Real = System.Single;
 namespace LibTessDotNet
-#endif
 {
     internal enum WindingRule
     {

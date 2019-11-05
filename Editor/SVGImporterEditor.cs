@@ -50,6 +50,7 @@ namespace Unity.VectorGraphics.Editor
         private SerializedProperty m_WrapMode;
         private SerializedProperty m_FilterMode;
         private SerializedProperty m_SampleCount;
+        private SerializedProperty m_PreserveSVGImageAspect;
 
         private readonly GUIContent m_SVGTypeText = new GUIContent("Generated Asset Type", "How the SVG file will be imported.");
         private readonly GUIContent m_TexturedSpriteMeshTypeText = new GUIContent("Mesh Type", "Type of the sprite mesh to generate.");
@@ -74,6 +75,7 @@ namespace Unity.VectorGraphics.Editor
         private readonly GUIContent m_WrapModeText = new GUIContent("Wrap Mode");
         private readonly GUIContent m_FilterModeText = new GUIContent("Filter Mode");
         private readonly GUIContent m_SampleCountText = new GUIContent("Sample Count");
+        private readonly GUIContent m_PreserveSVGImageAspectText = new GUIContent("Preserve Aspect");
 
         private readonly GUIContent[] svgTypeOptions =
         {
@@ -81,8 +83,9 @@ namespace Unity.VectorGraphics.Editor
             new GUIContent("Textured Sprite", "A textured sprite."),
             new GUIContent("Texture2D", "A normal texture."),
 #if UNITY_2019_3_OR_NEWER
-            new GUIContent("UIElements Vector Image", "A vector image that can be used by UIElements.")
+            new GUIContent("UIElements Vector Image", "A vector image that can be used by UIElements."),
 #endif
+            new GUIContent("UI SVGImage", "A tessellated sprite with \"infinite\" resolution, compatible with the UI canvas masking system.")
         };
 
         private readonly int[] svgTypeValues =
@@ -91,8 +94,9 @@ namespace Unity.VectorGraphics.Editor
             (int)SVGType.TexturedSprite,
             (int)SVGType.Texture2D,
 #if UNITY_2019_3_OR_NEWER
-            (int)SVGType.UIElement
+            (int)SVGType.UIElement,
 #endif
+            (int)SVGType.UISVGImage
         };
 
         private readonly GUIContent[] viewportOptions =
@@ -226,6 +230,7 @@ namespace Unity.VectorGraphics.Editor
             m_WrapMode = serializedObject.FindProperty("m_WrapMode");
             m_FilterMode = serializedObject.FindProperty("m_FilterMode");
             m_SampleCount = serializedObject.FindProperty("m_SampleCount");
+            m_PreserveSVGImageAspect = serializedObject.FindProperty("m_PreserveSVGImageAspect");
         }
 
         public override void OnInspectorGUI()
@@ -252,7 +257,7 @@ namespace Unity.VectorGraphics.Editor
             }
 
             using (new EditorGUI.DisabledScope(m_SVGType.hasMultipleDifferentValues || m_SVGType.intValue == (int)SVGType.Texture2D))
-                IntToggle(m_GeneratePhysicsShape, m_GeneratePhysicsShapeText);
+                BoolToggle(m_GeneratePhysicsShape, m_GeneratePhysicsShapeText);
 
             IntPopup(m_ViewportOptions, m_ViewportOptionsText, viewportOptions);
 
@@ -269,14 +274,14 @@ namespace Unity.VectorGraphics.Editor
                     PropertyField(m_StepDistance, m_StepDistanceText);
                     PropertyField(m_SamplingStepDistance, m_SamplingStepDistanceText);
 
-                    IntToggle(m_MaxCordDeviationEnabled, m_MaxCordDeviationEnabledText);
+                    BoolToggle(m_MaxCordDeviationEnabled, m_MaxCordDeviationEnabledText);
                     if (!m_MaxCordDeviationEnabled.hasMultipleDifferentValues)
                     {
                         using (new EditorGUI.DisabledScope(!m_MaxCordDeviationEnabled.boolValue))
                             PropertyField(m_MaxCordDeviation, m_MaxCordDeviationText);
                     }
 
-                    IntToggle(m_MaxTangentAngleEnabled, m_MaxTangentAngleEnabledText);
+                    BoolToggle(m_MaxTangentAngleEnabled, m_MaxTangentAngleEnabledText);
                     if (!m_MaxTangentAngleEnabled.hasMultipleDifferentValues)
                     {
                         using (new EditorGUI.DisabledScope(!m_MaxTangentAngleEnabled.boolValue))
@@ -340,7 +345,15 @@ namespace Unity.VectorGraphics.Editor
                 EditorGUILayout.Space();
             }
 
-            if (!m_SVGType.hasMultipleDifferentValues && (m_SVGType.intValue == (int)SVGType.VectorSprite || m_SVGType.intValue == (int)SVGType.TexturedSprite))
+            if (!m_SVGType.hasMultipleDifferentValues && m_SVGType.intValue == (int)SVGType.UISVGImage)
+            {
+                BoolToggle(m_PreserveSVGImageAspect, m_PreserveSVGImageAspectText);
+            }
+
+            if (!m_SVGType.hasMultipleDifferentValues &&
+                    (m_SVGType.intValue == (int)SVGType.VectorSprite   ||
+                     m_SVGType.intValue == (int)SVGType.TexturedSprite ||
+                     m_SVGType.intValue == (int)SVGType.UISVGImage))
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
@@ -420,7 +433,7 @@ namespace Unity.VectorGraphics.Editor
                 prop.intValue = value;
         }
 
-        private void IntToggle(SerializedProperty prop, GUIContent label)
+        private void BoolToggle(SerializedProperty prop, GUIContent label)
         {
             EditorGUI.BeginChangeCheck();
             EditorGUI.showMixedValue = prop.hasMultipleDifferentValues;

@@ -34,11 +34,7 @@
 namespace Unity.VectorGraphics.External
 {
 
-#if DOUBLE
-namespace LibTessDotNet.Double
-#else
 namespace LibTessDotNet
-#endif
 {
     internal class Dict<TValue> where TValue : class
     {

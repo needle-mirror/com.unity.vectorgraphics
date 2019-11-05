@@ -74,7 +74,7 @@ namespace Unity.VectorGraphics
                     geom.Vertices[i] = v;
                 }
 
-                VectorUtils.AdjustWinding(geom.Vertices, geom.Indices, VectorUtils.WindingDir.CW);
+                VectorUtils.AdjustWinding(geom.Vertices, geom.Indices, VectorUtils.WindingDir.CCW);
 
                 var count = vertices.Count;
                 for (int i = 0; i < geom.Vertices.Length; ++i)

@@ -191,7 +191,7 @@ namespace Unity.VectorGraphics.Editor
             width = 0;
             height = 0;
 
-            if (GetImporter().SvgType == SVGType.VectorSprite)
+            if (GetImporter().SvgType == SVGType.VectorSprite || GetImporter().SvgType == SVGType.UISVGImage)
             {
                 GetImporter().TextureSizeForSpriteEditor(GetSprite(), out width, out height);
             }

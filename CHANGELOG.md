@@ -1,5 +1,16 @@
 # Change log
 
+## [2.0.0-preview.8] - 2019-11-06
+
+### Changes
+
+* Added "uGUI SVGImage" asset type, which sets the proper stencil state for uGUI's masking system
+
+### Fixes
+
+* Fixed VectorImage winding order
+* Fixed LibTess preprocessor-dependent namespaces
+
 ## [2.0.0-preview.7] - 2019-10-24
 
 ### Changes
