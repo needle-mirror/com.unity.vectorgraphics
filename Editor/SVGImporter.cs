@@ -18,18 +18,23 @@ namespace Unity.VectorGraphics.Editor
     public enum SVGType
     {
         /// <summary>The SVG file will be imported as a tessellated sprite</summary>
-        VectorSprite,
+        VectorSprite = 0,
 
         /// <summary>The SVG file will be imported as a textured sprite</summary>
-        TexturedSprite,
+        TexturedSprite = 1,
 
         /// <summary>The SVG file will be imported as a Texture2D</summary>
-        Texture2D
+        Texture2D = 2,
+
+        // Type 3 is reserved for UIElement's VectorImage
+
+        /// <summary>The SVG file will be imported as a tessellated sprite, compatible with uGUI's masking system</summary>
+        UISVGImage = 4
     }
 
     /// <summary>The SVG importer class.</summary>
     [Serializable]
-    [ScriptedImporter(1, "svg")]
+    [ScriptedImporter(3, "svg")]
     public class SVGImporter : ScriptedImporter, ISpriteEditorDataProvider
     {
         internal static readonly string k_PackagePath = "Packages/com.unity.vectorgraphics";
@@ -211,6 +216,14 @@ namespace Unity.VectorGraphics.Editor
         }
         [SerializeField] private int m_SampleCount = 4;
 
+        /// <summary>When importing to an SVGImage, preserves the aspect ratio of the generated sprite.</summary>
+        public bool PreserveSVGImageAspect
+        {
+            get { return m_PreserveSVGImageAspect; }
+            set { m_PreserveSVGImageAspect = value; }
+        }
+        [SerializeField] private bool m_PreserveSVGImageAspect;
+
         [SerializeField]
         private SVGSpriteData m_SpriteData = new SVGSpriteData();
         internal SVGSpriteData GetSVGSpriteData() { return m_SpriteData; }
@@ -271,16 +284,35 @@ namespace Unity.VectorGraphics.Editor
             var geometry = VectorUtils.TessellateScene(sceneInfo.Scene, tessOptions, sceneInfo.NodeOpacity);
             var sprite = VectorUtils.BuildSprite(geometry, rect, SvgPixelsPerUnit, Alignment, CustomPivot, GradientResolution, true);
 
-            var name = System.IO.Path.GetFileNameWithoutExtension(ctx.assetPath);
-            if (SvgType == SVGType.VectorSprite)
-                GenerateSpriteAsset(ctx, sprite, name);
-            else if (SvgType == SVGType.TexturedSprite)
-                GenerateTexturedSpriteAsset(ctx, sprite, name);
-            else if (SvgType == SVGType.Texture2D)
-                GenerateTexture2DAsset(ctx, sprite, name);
+            switch (SvgType)
+            {
+                case SVGType.VectorSprite:
+                    sprite = BuildSpriteFromGeometry(geometry, rect);
+                    GenerateSpriteAsset(ctx, sprite, name);
+                    break;
+                case SVGType.UISVGImage:
+                    sprite = BuildSpriteFromGeometry(geometry, rect);
+                    GenerateUGUISpriteAsset(ctx, sprite, name);
+                    break;
+                case SVGType.TexturedSprite:
+                    sprite = BuildSpriteFromGeometry(geometry, rect);
+                    GenerateTexturedSpriteAsset(ctx, sprite, name);
+                    break;
+                case SVGType.Texture2D:
+                    sprite = BuildSpriteFromGeometry(geometry, rect);
+                    GenerateTexture2DAsset(ctx, sprite, name);
+                    break;
+                default:
+                    break;
+            }
         }
 
-        private void GenerateSpriteAsset(AssetImportContext ctx, Sprite sprite, string name)
+        private Sprite BuildSpriteFromGeometry(List<VectorUtils.Geometry> geometry, Rect rect)
+        {
+            return VectorUtils.BuildSprite(geometry, rect, SvgPixelsPerUnit, Alignment, CustomPivot, GradientResolution, true);
+        }
+
+        private void PrepareSpriteAsset(Sprite sprite, string name)
         {
             sprite.name = name + "Sprite";
             if (sprite.texture != null)
@@ -298,6 +330,11 @@ namespace Unity.VectorGraphics.Editor
 #endif
 
             sprite.hideFlags = HideFlags.None;
+        }
+
+        private void GenerateSpriteAsset(AssetImportContext ctx, Sprite sprite, string name)
+        {
+            PrepareSpriteAsset(sprite, name);
 
             ctx.AddObjectToAsset("sprite", sprite);
 
@@ -307,6 +344,32 @@ namespace Unity.VectorGraphics.Editor
             var spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
             spriteRenderer.sprite = sprite;
             spriteRenderer.material = mat;
+
+            SetPhysicsShape(sprite);
+
+            if (sprite.texture != null)
+                ctx.AddObjectToAsset("texAtlas", sprite.texture);
+
+            ctx.AddObjectToAsset("gameObject", gameObject);
+            ctx.SetMainObject(gameObject);
+        }
+
+        private void GenerateUGUISpriteAsset(AssetImportContext ctx, Sprite sprite, string name)
+        {
+            PrepareSpriteAsset(sprite, name);
+
+            ctx.AddObjectToAsset("sprite", sprite);
+
+            Material mat = MaterialForSVGSprite(sprite);
+
+            var gameObject = new GameObject(name);
+            gameObject.AddComponent<CanvasRenderer>();
+            gameObject.AddComponent<RectTransform>();
+
+            var svgImage = gameObject.AddComponent<SVGImage>();
+            svgImage.sprite = sprite;
+            svgImage.material = mat;
+            svgImage.preserveAspect = PreserveSVGImageAspect;
 
             SetPhysicsShape(sprite);
 
@@ -441,9 +504,15 @@ namespace Unity.VectorGraphics.Editor
             string path;
             if (sprite.texture != null)
                 // When texture is present, use the VectorGradient shader
-                path = k_PackagePath + "/Runtime/Materials/Unlit_VectorGradient.mat";
+                path = k_PackagePath + "/Runtime/Materials/Unlit_VectorGradient";
             else
-                path = k_PackagePath + "/Runtime/Materials/Unlit_Vector.mat";
+                path = k_PackagePath + "/Runtime/Materials/Unlit_Vector";
+
+            if (SvgType == SVGType.UISVGImage)
+                path += "UI";
+
+            path += ".mat";
+
             return AssetDatabase.LoadAssetAtPath<Material>(path);
         }
 
@@ -493,13 +562,24 @@ namespace Unity.VectorGraphics.Editor
         {
 
             var sprite = asset as Sprite;
-            if (sprite == null)
-            {
-                var go = asset as GameObject;
-                var sr = go != null ? go.GetComponent<SpriteRenderer>() : null;
-                sprite = sr != null ? sr.sprite : null;
-            }
-            return sprite;
+            if (sprite != null)
+                return sprite;
+
+            var go = asset as GameObject;
+
+            // Try with SpriteRenderer
+            var sr = go != null ? go.GetComponent<SpriteRenderer>() : null;
+            sprite = sr != null ? sr.sprite : null;
+            if (sprite != null)
+                return sprite;
+
+            // Try with VectorImage            
+            var si = go != null ? go.GetComponent<SVGImage>() : null;
+            sprite = si != null ? si.sprite : null;
+            if (sprite != null)
+                return sprite;
+
+            return null;
         }
 
         internal static Texture2D GetImportedTexture2D(string assetPath)

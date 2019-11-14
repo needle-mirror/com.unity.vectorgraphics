@@ -344,7 +344,7 @@ namespace Unity.VectorGraphics
                         // Workaround for case 1167309.
                         // Shader.Find() seems to fail on the package shader when doing a fresh import with a clean Library folder,
                         // but AssetDatabase.LoadAssetAtPath() works fine though.
-                        shader = UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>("Packages/com.unity.vectorgraphics/Runtime/Materials/VectorExpandEdges.shader");
+                        shader = UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>("Packages/com.unity.vectorgraphics/Runtime/Shaders/VectorExpandEdges.shader");
 #else
                         return null;
 #endif

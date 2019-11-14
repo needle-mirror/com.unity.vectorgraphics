@@ -1,5 +1,11 @@
 # Change log
 
+## [1.0.0-preview.31] - 2019-11-15
+
+### Changes
+
+* Added "uGUI SVGImage" asset type, which sets the proper stencil state for uGUI's masking system
+
 ## [1.0.0-preview.30] - 2019-10-24
 
 ### Changes

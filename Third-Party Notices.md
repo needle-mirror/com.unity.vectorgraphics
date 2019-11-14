@@ -1,6 +1,9 @@
-This package contains third-party software governed by the following terms:
+This package contains third-party software components governed by the license(s) indicated below:
+---------
 
-(1) LibTessDotNet
+Component Name: LibTessDotNet
+
+License Type: SGI FREE SOFTWARE LICENSE B (Version 2.0, Sept. 18, 2008) 
 
 ** SGI FREE SOFTWARE LICENSE B (Version 2.0, Sept. 18, 2008) 
 ** Copyright (C) 2011 Silicon Graphics, Inc.
@@ -28,8 +31,11 @@ This package contains third-party software governed by the following terms:
 ** be used in advertising or otherwise to promote the sale, use or other dealings in
 ** this Software without prior written authorization from Silicon Graphics, Inc.
 
+---------
 
-(2) Clipper
+Component Name: Clipper
+
+License Type: Boost Software License - Version 1.0 - August 17th, 2003
 
 Boost Software License - Version 1.0 - August 17th, 2003
 
