@@ -1,5 +1,11 @@
 # Change log
 
+## [2.0.0-preview.9] - 2019-11-15
+
+### Fixes
+
+* Fixed invalid VectorExpandEdges.shader path
+
 ## [2.0.0-preview.8] - 2019-11-06
 
 ### Changes

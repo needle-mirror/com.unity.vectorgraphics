@@ -476,4 +476,11 @@ public class UtilsTests
             Assert.AreEqual(expectedY, flippedVert.y, 0.001f);
         }
     }
+    
+    [Test]
+    public void VectorExpandEdges_ShaderExistsInPath()
+    {
+        // The following file is used in VectorSprite.cs
+        Assert.IsTrue(System.IO.File.Exists("Packages/com.unity.vectorgraphics/Runtime/Shaders/VectorExpandEdges.shader"));
+    }
 }
