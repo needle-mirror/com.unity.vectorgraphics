@@ -41,7 +41,7 @@ namespace Unity.VectorGraphics.Editor
 
     /// <summary>The SVG importer class.</summary>
     [Serializable]
-    [ScriptedImporter(4, "svg")]
+    [ScriptedImporter(5, "svg")]
     public class SVGImporter : ScriptedImporter, ISpriteEditorDataProvider
     {
         internal static readonly string k_PackagePath = "Packages/com.unity.vectorgraphics";

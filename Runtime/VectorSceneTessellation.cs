@@ -339,8 +339,6 @@ namespace Unity.VectorGraphics
         /// <returns>The generated texture atlas</returns>
         public static TextureAtlas GenerateAtlas(IEnumerable<Geometry> geoms, uint rasterSize, bool generatePOTTexture = true, bool encodeSettings = true)
         {
-            UnityEngine.Profiling.Profiler.BeginSample("GenerateAtlas");
-
             var fills = new Dictionary<IFill, AtlasEntry>();
             int texturedGeomCount = 0;
             foreach (var g in geoms)
@@ -366,6 +364,8 @@ namespace Unity.VectorGraphics
 
             if (fills.Count == 0)
                 return null;
+
+            UnityEngine.Profiling.Profiler.BeginSample("GenerateAtlas");
 
             Vector2 atlasSize;
             var rectsToPack = fills.Select(x => new KeyValuePair<IFill, Vector2>(x.Key, new Vector2(x.Value.Texture.Width, x.Value.Texture.Height))).ToList();

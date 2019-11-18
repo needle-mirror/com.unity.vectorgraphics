@@ -1,5 +1,13 @@
 # Change log
 
+## [2.0.0-preview.10] - 2019-11-19
+
+### Fixes
+
+* Added support for RectMask2D
+* Fixed sRGB support for UI shaders
+* Fixed unmatched BeginSample/EndSample in GenerateAtlas()
+
 ## [2.0.0-preview.9] - 2019-11-15
 
 ### Fixes
