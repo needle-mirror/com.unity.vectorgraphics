@@ -34,7 +34,7 @@ namespace Unity.VectorGraphics.Editor
 
     /// <summary>The SVG importer class.</summary>
     [Serializable]
-    [ScriptedImporter(3, "svg")]
+    [ScriptedImporter(4, "svg")]
     public class SVGImporter : ScriptedImporter, ISpriteEditorDataProvider
     {
         internal static readonly string k_PackagePath = "Packages/com.unity.vectorgraphics";
@@ -282,7 +282,8 @@ namespace Unity.VectorGraphics.Editor
                 rect = sceneInfo.SceneViewport;
 
             var geometry = VectorUtils.TessellateScene(sceneInfo.Scene, tessOptions, sceneInfo.NodeOpacity);
-            var sprite = VectorUtils.BuildSprite(geometry, rect, SvgPixelsPerUnit, Alignment, CustomPivot, GradientResolution, true);
+            var name = System.IO.Path.GetFileNameWithoutExtension(ctx.assetPath);
+            Sprite sprite = null;
 
             switch (SvgType)
             {

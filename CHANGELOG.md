@@ -1,5 +1,14 @@
 # Change log
 
+## [1.0.0-preview.32] - 2019-11-19
+
+### Fixes
+
+* Added proper support for RectMask2D
+* Fixed unmatched BeginSample/EndSample
+* Fixed sRGB support for UI shaders
+* Fixed empty name for SVG sub-assets
+
 ## [1.0.0-preview.31] - 2019-11-15
 
 ### Changes

@@ -35,7 +35,7 @@
         Cull Off
         Lighting Off
         ZWrite Off
-        Blend One OneMinusSrcAlpha
+        Blend SrcAlpha OneMinusSrcAlpha
         ColorMask [_ColorMask]
 
         Pass
@@ -46,6 +46,10 @@
             #pragma multi_compile_instancing
 
             #include "UnityCG.cginc"
+            #include "UnityUI.cginc"
+
+            #pragma multi_compile_local _ UNITY_UI_CLIP_RECT
+            #pragma multi_compile_local _ UNITY_UI_ALPHACLIP
 
             #ifdef UNITY_INSTANCING_ENABLED
             UNITY_INSTANCING_BUFFER_START(PerDrawSprite)
@@ -72,6 +76,7 @@
                 fixed4 color : COLOR;
                 float2 uv : TEXCOORD0; // uv.z is used for setting index
                 float2 settingIndex : TEXCOORD2;
+                float4 worldPosition : TEXCOORD3;
                 float4 vertex : SV_POSITION;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -80,6 +85,7 @@
             float4 _MainTex_ST;
             float4 _MainTex_TexelSize;
             fixed4 _Color;
+            float4 _ClipRect;
             
             v2f vert (appdata IN)
             {
@@ -89,13 +95,9 @@
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(OUT);
 
                 OUT.vertex = UnityObjectToClipPos(IN.vertex);
-                #ifdef UNITY_COLORSPACE_GAMMA
-                OUT.color = IN.color;
-                #else
-                OUT.color = fixed4(GammaToLinearSpace(IN.color.rgb), IN.color.a);
-                #endif
-                OUT.color *= _Color * _RendererColor;
+                OUT.color = IN.color * _Color * _RendererColor;
                 OUT.uv = TRANSFORM_TEX(IN.uv, _MainTex);
+                OUT.worldPosition = IN.vertex;
                 OUT.settingIndex = IN.settingIndex;
                 return OUT;
             }
@@ -179,7 +181,7 @@
                 finalColor.rgb *= finalColor.a;
 
                 #ifdef UNITY_UI_CLIP_RECT
-                finalColor.a *= UnityGet2DClipping(IN.worldPosition.xy, _ClipRect);
+                finalColor.a *= UnityGet2DClipping(i.worldPosition.xy, _ClipRect);
                 #endif
 
                 #ifdef UNITY_UI_ALPHACLIP
