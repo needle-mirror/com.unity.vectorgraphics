@@ -35,7 +35,7 @@
         Cull Off
         Lighting Off
         ZWrite Off
-        Blend SrcAlpha OneMinusSrcAlpha
+        Blend One OneMinusSrcAlpha
         ColorMask [_ColorMask]
 
         Pass
@@ -50,7 +50,6 @@
             #include "VectorGradient.cginc"
 
             #pragma multi_compile_local _ UNITY_UI_CLIP_RECT
-            #pragma multi_compile_local _ UNITY_UI_ALPHACLIP
 
             #ifdef UNITY_INSTANCING_ENABLED
             UNITY_INSTANCING_BUFFER_START(PerDrawSprite)
@@ -116,10 +115,7 @@
 
                 #ifdef UNITY_UI_CLIP_RECT
                 finalColor.a *= UnityGet2DClipping(i.worldPosition.xy, _ClipRect);
-                #endif
-
-                #ifdef UNITY_UI_ALPHACLIP
-                clip (finalColor.a - 0.001);
+                clip(finalColor.a - 0.001);
                 #endif
 
                 return finalColor;

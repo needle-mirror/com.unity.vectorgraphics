@@ -230,6 +230,58 @@ public class SVGParserTests
     }
 
     [Test]
+    public void ImportSVG_CanReadLinearGradientStopDefinedLater()
+    {
+        string svg =
+            @"<svg xmlns=""http://www.w3.org/2000/svg"" xmlns:xlink=""http://www.w3.org/1999/xlink"" width=""100"" height=""20"">
+                <defs>
+                    <linearGradient id=""grad"" xlink:href=""#stops"" />
+                    <linearGradient id=""stops"">
+                        <stop offset=""0%"" stop-color=""blue"" />
+                        <stop offset=""100%"" stop-color=""red"" />
+                    </linearGradient>
+                </defs>
+                <rect x=""5"" y=""10"" width=""100"" height=""20"" fill=""url(#grad)"" />
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.Scene.Root.Children[0].Shapes[0];
+        var fill = shape.Fill as GradientFill;
+        Assert.AreEqual(GradientFillType.Linear, fill.Type);
+        Assert.AreEqual(2, fill.Stops.Length);
+        Assert.AreEqual(0.0f, fill.Stops[0].StopPercentage);
+        Assert.AreEqual(Color.blue, fill.Stops[0].Color);
+        Assert.AreEqual(1.0f, fill.Stops[1].StopPercentage);
+        Assert.AreEqual(Color.red, fill.Stops[1].Color);
+    }
+
+    [Test]
+    public void ImportSVG_CanReadRadialGradientStopDefinedLater()
+    {
+        string svg =
+            @"<svg xmlns=""http://www.w3.org/2000/svg"" xmlns:xlink=""http://www.w3.org/1999/xlink"" width=""100"" height=""20"">
+                <defs>
+                    <radialGradient id=""grad"" xlink:href=""#stops"" />
+                    <radialGradient id=""stops"">
+                        <stop offset=""0%"" stop-color=""blue"" />
+                        <stop offset=""100%"" stop-color=""red"" />
+                    </radialGradient>
+                </defs>
+                <rect x=""5"" y=""10"" width=""100"" height=""20"" fill=""url(#grad)"" />
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.Scene.Root.Children[0].Shapes[0];
+        var fill = shape.Fill as GradientFill;
+        Assert.AreEqual(GradientFillType.Radial, fill.Type);
+        Assert.AreEqual(2, fill.Stops.Length);
+        Assert.AreEqual(0.0f, fill.Stops[0].StopPercentage);
+        Assert.AreEqual(Color.blue, fill.Stops[0].Color);
+        Assert.AreEqual(1.0f, fill.Stops[1].StopPercentage);
+        Assert.AreEqual(Color.red, fill.Stops[1].Color);
+    }
+
+    [Test]
     public void ImportSVG_SupportsFillOpacities()
     {
         string svg =

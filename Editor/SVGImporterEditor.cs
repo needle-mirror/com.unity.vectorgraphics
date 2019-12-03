@@ -383,7 +383,7 @@ namespace Unity.VectorGraphics.Editor
             {
                 var svgImporter = target as SVGImporter;
                 svgImporter.SvgPixelsPerUnit = Mathf.Max(0.001f, svgImporter.SvgPixelsPerUnit);
-                svgImporter.GradientResolution = Math.Min((ushort)4096, Math.Max((ushort)16, svgImporter.GradientResolution));
+                svgImporter.GradientResolution = Math.Min((ushort)4096, Math.Max((ushort)2, svgImporter.GradientResolution));
                 svgImporter.StepDistance = Mathf.Max(0.0f, svgImporter.StepDistance);
                 svgImporter.SamplingStepDistance = Mathf.Clamp(svgImporter.SamplingStepDistance, 3.0f, 1000.0f);
                 svgImporter.MaxCordDeviation = Mathf.Max(0.0f, svgImporter.MaxCordDeviation);

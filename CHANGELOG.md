@@ -1,5 +1,14 @@
 # Change log
 
+## [2.0.0-preview.11] - 2019-12-04
+
+### Fixes
+
+* Fixed CSS class used on root svg element
+* Properly handling referenced stop data defined later in the file
+* Fixed alpha blending for UI shaders
+* Fixed path corners in polygon definitions
+
 ## [2.0.0-preview.10] - 2019-11-19
 
 ### Fixes

@@ -41,7 +41,7 @@
         Cull Off
         Lighting Off
         ZWrite Off
-        Blend SrcAlpha OneMinusSrcAlpha
+        Blend One OneMinusSrcAlpha
         ColorMask [_ColorMask]
 
         Pass
@@ -54,7 +54,6 @@
             #pragma multi_compile _ PIXELSNAP_ON
             #pragma multi_compile _ ETC1_EXTERNAL_ALPHA
             #pragma multi_compile_local _ UNITY_UI_CLIP_RECT
-            #pragma multi_compile_local _ UNITY_UI_ALPHACLIP
             
             #include "UnityCG.cginc"
             #include "UnityUI.cginc"
@@ -149,9 +148,6 @@
 
                 #ifdef UNITY_UI_CLIP_RECT
                 c.a *= UnityGet2DClipping(IN.worldPosition.xy, _ClipRect);
-                #endif
-
-                #ifdef UNITY_UI_ALPHACLIP
                 clip(c.a - 0.001);
                 #endif
 

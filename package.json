@@ -1,6 +1,6 @@
 {
   "name": "com.unity.vectorgraphics",
-  "version": "2.0.0-preview.10",
+  "version": "2.0.0-preview.11",
   "unity": "2019.2",
   "displayName": "Vector Graphics",
   "description": "The vector graphics package provides an SVG importer and runtime vector graphics APIs.",
@@ -18,6 +18,6 @@
   "repository": {
     "type": "git",
     "url": "git@github.cds.internal.unity3d.com:unity/com.unity.vectorgraphics.git",
-    "revision": "57735f098fae6d2b0f5dc0b0b2848f304d150ee2"
+    "revision": "85217a0d2c3f0386e8838720db368db67b3376fa"
   }
 }
