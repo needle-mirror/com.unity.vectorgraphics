@@ -501,7 +501,8 @@ namespace Unity.VectorGraphics
         {
             var node = docReader.VisitCurrent();
 
-            var refFill = SVGAttribParser.ParseRelativeRef(node["xlink:href"], svgObjects) as GradientFill;
+            var link = node["xlink:href"];
+            var refFill = SVGAttribParser.ParseRelativeRef(link, svgObjects) as GradientFill;
             var refFillData = refFill != null ? gradientExInfo[refFill] as LinearGradientExData : null;
 
             bool relativeToWorld = refFillData != null ? refFillData.WorldRelative : false;
@@ -571,6 +572,16 @@ namespace Unity.VectorGraphics
 
             currentContainerSize.Pop();
             currentGradientFill = fill; // Children stops will register to this fill now
+            currentGradientId = node["id"];
+            currentGradientLink = SVGAttribParser.CleanIri(link);
+
+            if (!string.IsNullOrEmpty(link) && !svgObjects.ContainsKey(link))
+            {
+                // Reference may be defined later in the file. Save for postponed processing.
+                if (!postponedStopData.ContainsKey(currentGradientLink))
+                    postponedStopData.Add(currentGradientLink, new List<PostponedStopData>());
+                postponedStopData[currentGradientLink].Add(new PostponedStopData() { fill = fill });
+            }
 
             AddToSVGDictionaryIfPossible(node, fill);
             if (ShouldDeclareSupportedChildren(node))
@@ -631,7 +642,7 @@ namespace Unity.VectorGraphics
                 if (pointsString.Length < 4)
                     throw node.GetException("polygon 'points' do not even specify one triangle");
 
-                var pathProps = new PathProperties() { Stroke = stroke, Head = strokeEnding, Tail = strokeEnding };
+                var pathProps = new PathProperties() { Stroke = stroke, Corners = strokeCorner, Head = strokeEnding, Tail = strokeEnding };
                 var contour = new BezierContour() { Closed = true };
                 var lastPoint = new Vector2(
                         AttribLengthVal(pointsString[0], node, "points", 0.0f, DimType.Width),
@@ -732,7 +743,8 @@ namespace Unity.VectorGraphics
         {
             var node = docReader.VisitCurrent();
 
-            var refFill = SVGAttribParser.ParseRelativeRef(node["xlink:href"], svgObjects) as GradientFill;
+            var link = node["xlink:href"];
+            var refFill = SVGAttribParser.ParseRelativeRef(link, svgObjects) as GradientFill;
             var refFillData = refFill != null ? gradientExInfo[refFill] as RadialGradientExData : null;
 
             bool relativeToWorld = refFillData != null ? refFillData.WorldRelative : false;
@@ -804,6 +816,16 @@ namespace Unity.VectorGraphics
 
             currentContainerSize.Pop();
             currentGradientFill = fill; // Children stops will register to this fill now
+            currentGradientId = node["id"];
+            currentGradientLink = SVGAttribParser.CleanIri(link);
+
+            if (!string.IsNullOrEmpty(link) && !svgObjects.ContainsKey(link))
+            {
+                // Reference may be defined later in the file. Save for postponed processing.
+                if (!postponedStopData.ContainsKey(currentGradientLink))
+                    postponedStopData.Add(currentGradientLink, new List<PostponedStopData>());
+                postponedStopData[currentGradientLink].Add(new PostponedStopData() { fill = fill });
+            }
 
             AddToSVGDictionaryIfPossible(node, fill);
             if (ShouldDeclareSupportedChildren(node))
@@ -1054,6 +1076,27 @@ namespace Unity.VectorGraphics
             }
             newStops[newStops.Length - 1] = stop;
             currentGradientFill.Stops = newStops;
+
+            // Apply postponed stops if this was defined later in the file
+            if (!string.IsNullOrEmpty(currentGradientId) && postponedStopData.ContainsKey(currentGradientId))
+            {
+                foreach (var postponedStop in postponedStopData[currentGradientId])
+                    postponedStop.fill.Stops = newStops;
+            }
+
+            // Local stops overrides referenced ones
+            if (!string.IsNullOrEmpty(currentGradientLink) && postponedStopData.ContainsKey(currentGradientLink))
+            {
+                var stopDataList = postponedStopData[currentGradientLink];
+                foreach (var postponedStop in stopDataList)
+                {
+                    if (postponedStop.fill == currentGradientFill)
+                    {
+                        stopDataList.Remove(postponedStop);
+                        break;
+                    }
+                }
+            }
 
             if (ShouldDeclareSupportedChildren(node))
                 SupportElems(node);  // No children supported
@@ -2156,12 +2199,15 @@ namespace Unity.VectorGraphics
         Dictionary<SceneNode, PatternData> patternData = new Dictionary<SceneNode, PatternData>();
         Dictionary<SceneNode, MaskData> maskData = new Dictionary<SceneNode, MaskData>();
         Dictionary<string, List<NodeReferenceData>> postponedSymbolData = new Dictionary<string, List<NodeReferenceData>>();
+        Dictionary<string, List<PostponedStopData>> postponedStopData = new Dictionary<string, List<PostponedStopData>>();
         SVGPostponedFills postponedFills = new SVGPostponedFills();
         List<NodeWithParent> invisibleNodes = new List<NodeWithParent>();
         Stack<Vector2> currentContainerSize = new Stack<Vector2>();
         Stack<Vector2> currentViewBoxSize = new Stack<Vector2>();
         Stack<SceneNode> currentSceneNode = new Stack<SceneNode>();
         GradientFill currentGradientFill;
+        string currentGradientId;
+        string currentGradientLink;
         ElemHandler[] allElems;
         HashSet<ElemHandler> elemsToAddToHierarchy;
         SVGStyleResolver styles = new SVGStyleResolver();
@@ -2219,6 +2265,11 @@ namespace Unity.VectorGraphics
             public SceneNode node;
             public Rect viewport;
             public string id;
+        }
+
+        struct PostponedStopData
+        {
+            public GradientFill fill;
         }
     }
 
@@ -2384,6 +2435,13 @@ namespace Unity.VectorGraphics
 
         private IEnumerable<string> SortedClasses(List<string> classes)
         {
+            // We may not have parsed the global sheets yet (happens when setting a class on the root <svg> element).
+            if (globalStyleSheet.selectors.Count() == 0)
+            {
+                foreach (var klass in classes)
+                    yield return klass;
+            }
+
             // We match classes in reverse order of their appearance. This isn't conformant to CSS selectors priority,
             // but this works well enough for auto-generated CSS styles.
             foreach (var sel in globalStyleSheet.selectors.Reverse())
@@ -2571,6 +2629,16 @@ namespace Unity.VectorGraphics
             object obj;
             dict.TryGetValue(iri, out obj);
             return obj;
+        }
+
+        public static string CleanIri(string iri)
+        {
+            if (iri == null)
+                return null;
+            if (!iri.StartsWith("#"))
+                throw new Exception("Unsupported reference type (" + iri + ")");
+            iri = iri.Substring(1);
+            return iri;
         }
 
         SVGAttribParser(string attrib, AttribPath attribPath)
