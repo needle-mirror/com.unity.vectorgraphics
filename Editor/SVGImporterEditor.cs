@@ -51,6 +51,7 @@ namespace Unity.VectorGraphics.Editor
         private SerializedProperty m_FilterMode;
         private SerializedProperty m_SampleCount;
         private SerializedProperty m_PreserveSVGImageAspect;
+        private SerializedProperty m_UseSVGPixelsPerUnit;
 
         private readonly GUIContent m_SVGTypeText = new GUIContent("Generated Asset Type", "How the SVG file will be imported.");
         private readonly GUIContent m_TexturedSpriteMeshTypeText = new GUIContent("Mesh Type", "Type of the sprite mesh to generate.");
@@ -76,6 +77,7 @@ namespace Unity.VectorGraphics.Editor
         private readonly GUIContent m_FilterModeText = new GUIContent("Filter Mode");
         private readonly GUIContent m_SampleCountText = new GUIContent("Sample Count");
         private readonly GUIContent m_PreserveSVGImageAspectText = new GUIContent("Preserve Aspect");
+        private readonly GUIContent m_UseSVGPixelsPerUnitText = new GUIContent("Use SVG Pixels Per Unit", "When set, the \"Pixels Per Unit\" value will be applied relative to the SVG asset size instead of the texture size.");
 
         private readonly GUIContent[] svgTypeOptions =
         {
@@ -231,6 +233,7 @@ namespace Unity.VectorGraphics.Editor
             m_FilterMode = serializedObject.FindProperty("m_FilterMode");
             m_SampleCount = serializedObject.FindProperty("m_SampleCount");
             m_PreserveSVGImageAspect = serializedObject.FindProperty("m_PreserveSVGImageAspect");
+            m_UseSVGPixelsPerUnit = serializedObject.FindProperty("m_UseSVGPixelsPerUnit");
         }
 
         public override void OnInspectorGUI()
@@ -319,7 +322,10 @@ namespace Unity.VectorGraphics.Editor
                 ++EditorGUI.indentLevel;
 
                 if (m_SVGType.intValue == (int)SVGType.TexturedSprite)
+                {
                     IntPopup(m_TexturedSpriteMeshType, m_TexturedSpriteMeshTypeText, texturedSpriteMeshTypeOptions, texturedSpriteMeshTypeValues);
+                    BoolToggle(m_UseSVGPixelsPerUnit, m_UseSVGPixelsPerUnitText);
+                }
 
                 PropertyField(m_KeepTextureAspectRatio, m_KeepTextureAspectRatioText);
                 if (!m_KeepTextureAspectRatio.hasMultipleDifferentValues && m_KeepTextureAspectRatio.boolValue)

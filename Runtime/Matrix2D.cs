@@ -15,19 +15,19 @@ namespace Unity.VectorGraphics
         // column no  1  | m01 m11  0
         // (=horiz)   2  | m02 m12  1
 
-        ///*undocumented*
+        /// <summary>The matrix member at (0,0)</summary>
         public float m00;
-        ///*undocumented*
+        /// <summary>The matrix member at (1,0)</summary>
         public float m10;
 
-        ///*undocumented*
+        /// <summary>The matrix member at (0,1)</summary>
         public float m01;
-        ///*undocumented*
+        /// <summary>The matrix member at (1,1)</summary>
         public float m11;
 
-        ///*undocumented*
+        /// <summary>The matrix member at (0,2)</summary>
         public float m02;
-        ///*undocumented*
+        /// <summary>The matrix member at (1,2)</summary>
         public float m12;
 
         /// <summary>Initializes a Matrix2D with column vectors</summary>

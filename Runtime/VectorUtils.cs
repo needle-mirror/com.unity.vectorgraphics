@@ -120,7 +120,8 @@ namespace Unity.VectorGraphics
         /// <summary>Builds an ellipse shape.</summary>
         /// <param name="ellipseShape">The shape object that will be filled with an ellipse.</param>
         /// <param name="pos">The position of the circle, relative to its center.</param>
-        /// <param name="radius">The radius of the circle.</param>
+        /// <param name="radiusX">The x component of the radius of the circle.</param>
+        /// <param name="radiusY">The y component of the radius of the circle.</param>
         public static void MakeEllipseShape(Shape ellipseShape, Vector2 pos, float radiusX, float radiusY)
         {
             var rect = new Rect(pos.x-radiusX, pos.y-radiusY, radiusX+radiusX, radiusY+radiusY);
@@ -237,6 +238,7 @@ namespace Unity.VectorGraphics
         /// <param name="center">The center of the arc</param>
         /// <param name="startAngleRads">The starting angle of the arc, in radians</param>
         /// <param name="sweepAngleRads">The "length" of the arc, in radians</param>
+        /// <param name="radius">The radius of the arc</param>
         /// <returns>An array of up to four BezierSegments holding the arc</returns>
         public static BezierPathSegment[] MakeArc(Vector2 center, float startAngleRads, float sweepAngleRads, float radius)
         {
@@ -511,6 +513,14 @@ namespace Unity.VectorGraphics
         /// <returns>The length of the segment</returns>
         public static float SegmentLength(BezierSegment segment, float precision = 0.001f)
         {
+            // This adaptive algorithm doesn't behave well at the limit of float precision,
+            // so we revert to a dummy iterative approach in this case
+            if (VectorUtils.HasLargeCoordinates(segment))
+            {
+                int steps = Math.Min(100, (int)(1.0f/precision));
+                return SegmentLengthIterative(segment, steps);
+            }
+
             float tmax = 0.0f;
             float length = 0.0f;
             while ((tmax = AdaptiveQuadraticApproxSplitPoint(segment, precision)) < 1.0f)
@@ -522,6 +532,33 @@ namespace Unity.VectorGraphics
             }
             length += MidPointQuadraticApproxLength(segment);
             return length;
+        }
+
+        internal static float SegmentLengthIterative(BezierSegment segment, int steps = 10)
+        {
+            if (steps <= 2)
+                return (segment.P3 - segment.P0).magnitude;
+
+            float length = 0.0f;
+            var p = segment.P0;
+            for (int i = 1; i <= steps; ++i)
+            {
+                float t = (float)i/steps;
+                var q = VectorUtils.Eval(segment, t);
+                length += (q-p).magnitude;
+                p = q;
+            }
+            return length;
+        }
+
+        internal static bool HasLargeCoordinates(BezierSegment segment)
+        {
+            const float kMaxCoord = 10000.0f;
+            return
+                segment.P0.x > kMaxCoord || segment.P0.y > kMaxCoord ||
+                segment.P1.x > kMaxCoord || segment.P1.y > kMaxCoord ||
+                segment.P2.x > kMaxCoord || segment.P2.y > kMaxCoord ||
+                segment.P3.x > kMaxCoord || segment.P3.y > kMaxCoord;
         }
 
         static float AdaptiveQuadraticApproxSplitPoint(BezierSegment segment, float precision)
@@ -618,7 +655,9 @@ namespace Unity.VectorGraphics
 
         /// <summary>Transforms a path by a transformation matrix.</summary>
         /// <param name="path">The path to transform</param>
-        /// <param name="matrix">The transformation matrix to apply on the curve segment</param>
+        /// <param name="translation">The translation to apply</param>
+        /// <param name="rotation">The rotation to apply, in radians</param>
+        /// <param name="scaling">The scaling to apply</param>
         /// <returns>The transformed path</returns>
         public static BezierPathSegment[] TransformBezierPath(BezierPathSegment[] path, Vector2 translation, float rotation, Vector2 scaling)
         {

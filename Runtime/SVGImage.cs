@@ -6,12 +6,15 @@ using UnityEngine.Rendering;
 using UnityEngine.U2D;
 using Unity.Collections;
 
+/// <summary>A UI image that holds SVG content.</summary>
 [AddComponentMenu("UI/SVG Image", 11)]
 public class SVGImage : MaskableGraphic
 {
     [SerializeField] private Sprite m_Sprite = null;
 
     [SerializeField] private bool m_PreserveAspect = false;
+
+    /// <summary>If true, preserves the aspect ratio of the SVG image.</summary>
     public bool preserveAspect {
         get { return m_PreserveAspect; }
         set {
@@ -41,6 +44,9 @@ public class SVGImage : MaskableGraphic
         }
     }
 
+    /// <summary>
+    /// The main texture of the SVG image.  This will be a white texture for textureless images.
+    /// </summary>
     public override Texture mainTexture
     {
         get
@@ -62,6 +68,8 @@ public class SVGImage : MaskableGraphic
     static NativeSlice<Vector2> s_TextCord2 = new NativeSlice<Vector2>();
     static UIVertex s_TempVertex = new UIVertex();
 
+    /// <summary>Populates the mesh</summary>
+    /// <param name="toFill">The vertices to fill</param>
     protected override void OnPopulateMesh(VertexHelper toFill)
     {
         if (sprite == null)
@@ -122,24 +130,24 @@ public class SVGImage : MaskableGraphic
 
     private Vector2 GetDrawingDimensions(bool shouldPreserveAspect)
     {
-         var size = new Vector2(sprite.rect.width, sprite.rect.height);
+        var size = new Vector2(sprite.rect.width, sprite.rect.height);
 
-         Rect r = GetPixelAdjustedRect();
+        Rect r = GetPixelAdjustedRect();
 
-         int spriteW = Mathf.RoundToInt(size.x);
-         int spriteH = Mathf.RoundToInt(size.y);
+        int spriteW = Mathf.RoundToInt(size.x);
+        int spriteH = Mathf.RoundToInt(size.y);
 
-         if (shouldPreserveAspect && size.sqrMagnitude > 0.0f)
-         {
-             var spriteRatio = size.x / size.y;
-             var rectRatio = r.width / r.height;
+        if (shouldPreserveAspect && size.sqrMagnitude > 0.0f)
+        {
+            var spriteRatio = size.x / size.y;
+            var rectRatio = r.width / r.height;
 
-             if (spriteRatio > rectRatio)
-                 r.height = r.width * (1.0f / spriteRatio);
-             else
-                 r.width = r.height * spriteRatio;
-         }
+            if (spriteRatio > rectRatio)
+                r.height = r.width * (1.0f / spriteRatio);
+            else
+                r.width = r.height * spriteRatio;
+        }
 
         return r.size;
-     }
+    }
 }

@@ -239,6 +239,15 @@ namespace Unity.VectorGraphics.Editor
         }
         [SerializeField] private bool m_PreserveSVGImageAspect;
 
+        /// <summary></summary>
+        public bool UseSVGPixelsPerUnit
+        {
+            get { return m_UseSVGPixelsPerUnit; }
+            set { m_UseSVGPixelsPerUnit = value; }
+        }
+        [SerializeField] private bool m_UseSVGPixelsPerUnit;
+
+
         [SerializeField]
         private SVGSpriteData m_SpriteData = new SVGSpriteData();
         internal SVGSpriteData GetSVGSpriteData() { return m_SpriteData; }
@@ -426,7 +435,14 @@ namespace Unity.VectorGraphics.Editor
             var pivot = sprite.pivot;
             pivot /= sprite.rect.size;
 
-            var texturedSprite = Sprite.Create(tex, rect, pivot, SvgPixelsPerUnit, 0, TexturedSpriteMeshType, m_SpriteData.SpriteRect.border);
+            float ratio = 1.0f;
+            if (m_UseSVGPixelsPerUnit)
+            {
+                ratio = ((float)tex.width) / sprite.rect.width;
+                ratio = Mathf.Max(0.001f, ratio);
+            }
+
+            var texturedSprite = Sprite.Create(tex, rect, pivot, SvgPixelsPerUnit * ratio, 0, TexturedSpriteMeshType, m_SpriteData.SpriteRect.border);
             texturedSprite.name = name;
 
             m_ImportingSprite = texturedSprite;
@@ -728,6 +744,7 @@ namespace Unity.VectorGraphics.Editor
         }
 
         /// <summary>Returns the sprite rectangles</summary>
+        /// <returns>An array of the sprite rectangles</returns>
         SpriteRect[] ISpriteEditorDataProvider.GetSpriteRects()
         {
             return new SpriteRect[] { m_SpriteData.SpriteRect };
@@ -757,6 +774,8 @@ namespace Unity.VectorGraphics.Editor
         }
 
         /// <summary>Gets the data provider for a given type</summary>
+        /// <typeparam name="T">The type of the data provider</typeparam>
+        /// <returns>The data provider</returns>
         T ISpriteEditorDataProvider.GetDataProvider<T>()
         {
             if (typeof(T) == typeof(ISpritePhysicsOutlineDataProvider))

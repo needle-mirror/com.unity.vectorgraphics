@@ -44,7 +44,7 @@ namespace Unity.VectorGraphics
         }
 
         /// <summary>Tessellates a Scene object into triangles.</summary>
-        /// <param name="node">The root node of the hierarchy to tessellate</param>
+        /// <param name="scene">The scene containing the hierarchy to tessellate</param>
         /// <param name="tessellationOptions">The tessellation options</param>
         /// <param name="nodeOpacities">If provided, the resulting node opacities</param>
         /// <returns>A list of tesselated geometry</returns>

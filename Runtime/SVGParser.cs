@@ -55,7 +55,7 @@ namespace Unity.VectorGraphics
         }
 
         /// <summary>Kicks off an SVG file import.</summary>
-        /// <param name="reader">The reader object containing the SVG file data</param>
+        /// <param name="textReader">The reader object containing the SVG file data</param>
         /// <param name="dpi">The DPI of the SVG file, or 0 to use the device's DPI</param>
         /// <param name="pixelsPerUnit">How many SVG units fit in a Unity unit</param>
         /// <param name="windowWidth">The default with of the viewport, may be 0</param>
@@ -69,7 +69,7 @@ namespace Unity.VectorGraphics
         }
 
         /// <summary>Kicks off an SVG file import.</summary>
-        /// <param name="reader">The reader object containing the SVG file data</param>
+        /// <param name="textReader">The reader object containing the SVG file data</param>
         /// <param name="viewportOptions">The viewport options to use</param>
         /// <param name="dpi">The DPI of the SVG file, or 0 to use the device's DPI</param>
         /// <param name="pixelsPerUnit">How many SVG units fit in a Unity unit</param>

@@ -52,7 +52,7 @@ fixed4 EvaluateGradient(float settingIndex, float2 uv, sampler2D atlas, float2 t
         uv = float2(RadialAddress(uv, focus), 0.0);
     }
 
-    int addressing = gradSettings.y * 255;
+    int addressing = round(gradSettings.y * 255);
     uv.x = (addressing == 0) ? fmod(uv.x,1.0f) : uv.x; // Wrap
     uv.x = (addressing == 1) ? max(min(uv.x,1.0f), 0.0f) : uv.x; // Clamp
     float w = fmod(uv.x,2.0f);
