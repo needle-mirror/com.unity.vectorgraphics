@@ -1,5 +1,16 @@
 # Change log
 
+## [1.0.0-preview.34] - 2020-02-14
+
+### Changes
+
+* Added a "Textured Sprite" option to use the SVG's pixels per unit instead of the texture
+
+### Fixes
+
+* Fixed gradients not showing properly on Metal
+* Prevent hang while evaluating segment length with large coordinates
+
 ## [1.0.0-preview.33] - 2019-12-05
 
 ### Fixes

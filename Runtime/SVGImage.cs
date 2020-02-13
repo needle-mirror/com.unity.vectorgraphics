@@ -9,12 +9,15 @@ using UnityEngine.Experimental.Rendering;
 using UnityEngine.Experimental.U2D;
 using Unity.Collections;
 
+/// <summary>A UI image that holds SVG content.</summary>
 [AddComponentMenu("UI/SVG Image", 11)]
 public class SVGImage : MaskableGraphic
 {
     [SerializeField] private Sprite m_Sprite = null;
 
     [SerializeField] private bool m_PreserveAspect = false;
+
+    /// <summary>If true, preserves the aspect ratio of the SVG image.</summary>
     public bool preserveAspect {
         get { return m_PreserveAspect; }
         set {
@@ -44,6 +47,9 @@ public class SVGImage : MaskableGraphic
         }
     }
 
+    /// <summary>
+    /// The main texture of the SVG image.  This will be a white texture for textureless images.
+    /// </summary>
     public override Texture mainTexture
     {
         get
@@ -65,6 +71,8 @@ public class SVGImage : MaskableGraphic
     static NativeSlice<Vector2> s_TextCord2 = new NativeSlice<Vector2>();
     static UIVertex s_TempVertex = new UIVertex();
 
+    /// <summary>Populates the mesh</summary>
+    /// <param name="toFill">The vertices to fill</param>
     protected override void OnPopulateMesh(VertexHelper toFill)
     {
         if (sprite == null)

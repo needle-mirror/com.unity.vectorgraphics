@@ -20,6 +20,7 @@ public class SVGImageEditor : GraphicEditor
     GUIContent m_SpriteContent;
     GUIContent m_PreserveAspectContent;
 
+    /// <summary>Enables the editor</summary>
     protected override void OnEnable()
     {
         base.OnEnable();
@@ -31,7 +32,7 @@ public class SVGImageEditor : GraphicEditor
         m_PreserveAspect = serializedObject.FindProperty("m_PreserveAspect");
     }
 
-
+    /// <summary>Draws the editor</summary>
     public override void OnInspectorGUI()
     {
         serializedObject.Update();
@@ -113,6 +114,8 @@ public class SVGImageEditor : GraphicEditor
         Selection.activeGameObject = element;
     }
 
+    /// <summary>Adds the SVG Image menu item.</summary>
+    /// <param name="menuCommand">The menu command into which to insert the menu item.</param>
     [MenuItem("GameObject/UI/SVG Image", false, 2002)]
     static public void AddSVGImage(MenuCommand menuCommand)
     {
