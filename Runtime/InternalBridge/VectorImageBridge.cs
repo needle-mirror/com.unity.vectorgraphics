@@ -11,7 +11,7 @@ namespace Unity.VectorGraphics
     internal static class InternalBridge
     {
         // UnityEngine.UIElements.VectorImage is internal, so this method needs to be part of the internal bridge for now.
-        internal static void MakeUIElementsAsset(IEnumerable<VectorUtils.Geometry> geoms, uint rasterSize, out UnityEngine.Object outAsset, out Texture2D outTexAtlas)
+        internal static void MakeVectorImageAsset(IEnumerable<VectorUtils.Geometry> geoms, uint rasterSize, out UnityEngine.Object outAsset, out Texture2D outTexAtlas)
         {
             var atlas = VectorUtils.GenerateAtlas(geoms, rasterSize, false, false);
             if (atlas != null)

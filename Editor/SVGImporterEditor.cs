@@ -7,11 +7,17 @@ using System.Reflection;
 using Unity.Collections;
 using UnityEngine;
 using UnityEditor;
-using UnityEditor.Experimental.AssetImporters;
+
 using UnityEngine.U2D;
 using UnityEngine.Experimental.U2D;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
+
+#if UNITY_2020_2_OR_NEWER
+using UnityEditor.AssetImporters;
+#else
+using UnityEditor.Experimental.AssetImporters;
+#endif
 
 namespace Unity.VectorGraphics.Editor
 {
@@ -85,7 +91,7 @@ namespace Unity.VectorGraphics.Editor
             new GUIContent("Textured Sprite", "A textured sprite."),
             new GUIContent("Texture2D", "A normal texture."),
 #if UNITY_2019_3_OR_NEWER
-            new GUIContent("UIElements Vector Image", "A vector image that can be used by UIElements."),
+            new GUIContent("UI Toolkit Vector Image", "A vector image that can be used by UI Toolkit."),
 #endif
             new GUIContent("UI SVGImage", "A tessellated sprite with \"infinite\" resolution, compatible with the UI canvas masking system.")
         };
@@ -96,7 +102,7 @@ namespace Unity.VectorGraphics.Editor
             (int)SVGType.TexturedSprite,
             (int)SVGType.Texture2D,
 #if UNITY_2019_3_OR_NEWER
-            (int)SVGType.UIElement,
+            (int)SVGType.UIToolkit,
 #endif
             (int)SVGType.UISVGImage
         };
@@ -243,7 +249,7 @@ namespace Unity.VectorGraphics.Editor
             #endif
 
             #if UNITY_2019_3_OR_NEWER
-            if (m_SVGType.intValue != (int)SVGType.UIElement)
+            if (m_SVGType.intValue != (int)SVGType.UIToolkit)
                 PropertyField(m_PixelsPerUnit, m_PixelsPerUnitText);
             #else
             PropertyField(m_PixelsPerUnit, m_PixelsPerUnitText);

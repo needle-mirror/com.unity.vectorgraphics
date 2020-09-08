@@ -496,6 +496,18 @@ namespace Unity.VectorGraphics
                 }
             }
 
+            // Resolve any previous node that was referencing this image
+            string id = node["id"];
+            if (!string.IsNullOrEmpty(id))
+            {
+                List<NodeReferenceData> refList;
+                if (postponedSymbolData.TryGetValue(id, out refList))
+                {
+                    foreach (var refData in refList)
+                        ResolveReferencedNode(sceneNode, refData, true);
+                }
+            }
+
             AddToSVGDictionaryIfPossible(node, sceneNode);
             if (ShouldDeclareSupportedChildren(node))
                 SupportElems(node);  // No children supported
@@ -2642,6 +2654,19 @@ namespace Unity.VectorGraphics
                 float divisor = colorString.Contains("%") ? 100.0f : 255.0f;
                 return new Color(Byte.Parse(numbers[0]) / divisor, Byte.Parse(numbers[1]) / divisor, Byte.Parse(numbers[2]) / divisor);
             }
+            else if (colorString.StartsWith("rgba(") && colorString.EndsWith(")"))
+            {
+                string numbersString = colorString.Substring(5, colorString.Length-6);
+                string[] numbers = numbersString.Split(new char[] { ',', '%' }, StringSplitOptions.RemoveEmptyEntries);
+                if (numbers.Length != 4)
+                    throw new Exception("Invalid rgba() color specification");
+                float divisor = colorString.Contains("%") ? 100.0f : 255.0f;
+                return new Color(
+                    Byte.Parse(numbers[0]) / divisor,
+                    Byte.Parse(numbers[1]) / divisor,
+                    Byte.Parse(numbers[2]) / divisor,
+                    divisor == 100.0f ? Byte.Parse(numbers[3]) / divisor : ParseFloat(numbers[3]));
+            }
 
             // Named color
             if (namedColors == null)
@@ -2928,7 +2953,7 @@ namespace Unity.VectorGraphics
             }
 
             var clr = ParseColor(string.Join("", paintParts));
-            clr.a = opacity;
+            clr.a *= opacity;
             if (paintParts.Length > 1)
             {
                 // TODO: Support ICC-Color

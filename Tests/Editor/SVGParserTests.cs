@@ -640,6 +640,31 @@ public class SVGParserTests
     }
 
     [Test]
+    public void ImportSVG_UseCanReferenceImageDefinedLater()
+    {
+        string svg =
+            @"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""no""?>
+            <!DOCTYPE svg PUBLIC ""-//W3C//DTD SVG 1.1//EN"" ""http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"">
+            <svg width=""100%"" height=""100%"" viewBox=""0 0 256 256"" version=""1.1"" xmlns=""http://www.w3.org/2000/svg"" xmlns:xlink=""http://www.w3.org/1999/xlink"" xml:space=""preserve"" xmlns:serif=""http://www.serif.com/"" style=""fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;"">
+                <g transform=""matrix(0.975989,0,0,0.975989,3.07335,3.07335)"">
+                    <path d=""M256,64C256,28.677 227.323,0 192,0L64,0C28.677,0 0,28.677 0,64L0,192C0,227.323 28.677,256 64,256L192,256C227.323,256 256,227.323 256,192L256,64Z"" style=""fill:url(#_Linear1);stroke:black;stroke-width:6.15px;""/>
+                </g>
+                <g id=""palette--5-"" serif:id=""palette (5)"" transform=""matrix(0.135645,0,0,-0.135645,19.4839,209.387)"">
+                    <use id=""Use"" xlink:href=""#_Image2"" x=""0"" y=""0"" width=""1600px"" height=""1200px"" transform=""matrix(7.37327,0,0,7.36196,0,0)""/>
+                </g>
+                <defs>
+                    <linearGradient id=""_Linear1"" x1=""0"" y1=""0"" x2=""1"" y2=""0"" gradientUnits=""userSpaceOnUse"" gradientTransform=""matrix(256,0,0,256,0,128)""><stop offset=""0"" style=""stop-color:rgb(216,255,0);stop-opacity:1""/><stop offset=""1"" style=""stop-color:rgb(255,0,244);stop-opacity:1""/></linearGradient>
+                    <image id=""_Image2"" width=""217px"" height=""163px"" xlink:href=""data:image/png;base64,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""/>
+                </defs>
+            </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var shape = sceneInfo.NodeIDs["Use"].Shapes[0];
+        var textureFill = shape.Fill as TextureFill;
+        Assert.IsNotNull(textureFill);
+    }
+
+    [Test]
     public void ImportSVG_SymbolCanReferenceAnotherSymbolDefinedLater()
     {
         string svg =

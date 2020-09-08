@@ -13,7 +13,13 @@ using UnityEditor.U2D;
 using UnityEditor.Experimental.U2D;
 #endif
 using UnityEngine.Experimental.U2D;
+
+#if UNITY_2020_2_OR_NEWER
+using UnityEditor.AssetImporters;
+#else
 using UnityEditor.Experimental.AssetImporters;
+#endif
+
 using UnityEngine.Experimental.Rendering;
 using UnityEditor.U2D.Sprites;
 
@@ -32,8 +38,12 @@ namespace Unity.VectorGraphics.Editor
         Texture2D = 2,
 
 #if UNITY_2019_3_OR_NEWER
-        /// <summary>The SVG file will be imported as a UIElement Vector Image asset</summary>
+        /// <summary>The SVG file will be imported as a UIElements Vector Image asset (deprecated)</summary>
+        [Obsolete("Use UIToolkit instead")]
         UIElement = 3,
+
+        /// <summary>The SVG file will be imported as a UI Toolkit Vector Image asset</summary>
+        UIToolkit = 3,
 #endif
         /// <summary>The SVG file will be imported as a tessellated sprite, compatible with the UI canvas masking system</summary>
         UISVGImage = 4,
@@ -330,8 +340,8 @@ namespace Unity.VectorGraphics.Editor
                     GenerateTexture2DAsset(ctx, sprite, name);
                     break;
 #if UNITY_2019_3_OR_NEWER
-                case SVGType.UIElement:
-                    GenerateUIElementAsset(ctx, geometry, name);
+                case SVGType.UIToolkit:
+                    GenerateVectorImageAsset(ctx, geometry, name);
                     break;
 #endif
                 default:
@@ -485,11 +495,11 @@ namespace Unity.VectorGraphics.Editor
         }
 
 #if UNITY_2019_3_OR_NEWER
-        private void GenerateUIElementAsset(AssetImportContext ctx, List<VectorUtils.Geometry> geometry, string name)
+        private void GenerateVectorImageAsset(AssetImportContext ctx, List<VectorUtils.Geometry> geometry, string name)
         {
             UnityEngine.Object asset;
             Texture2D texAtlas;
-            Unity.VectorGraphics.InternalBridge.MakeUIElementsAsset(geometry, GradientResolution, out asset, out texAtlas);
+            Unity.VectorGraphics.InternalBridge.MakeVectorImageAsset(geometry, GradientResolution, out asset, out texAtlas);
 
             if (asset == null)
             {
@@ -617,10 +627,10 @@ namespace Unity.VectorGraphics.Editor
             // These tessellation options were found by trial and error to find values that made
             // visual sense with a variety of SVG assets.
 
-            // "Pixels per Unit" doesn't make sense for UIElements since it will be displayed in
+            // "Pixels per Unit" doesn't make sense for UI Toolkit since it will be displayed in
             // a pixels space.  We adjust the magic values below accordingly.
             #if UNITY_2019_3_OR_NEWER
-            float ppu = (SvgType == SVGType.UIElement) ? 1.0f : SvgPixelsPerUnit;
+            float ppu = (SvgType == SVGType.UIToolkit) ? 1.0f : SvgPixelsPerUnit;
             #else
             float ppu = SvgPixelsPerUnit;
             #endif
@@ -634,7 +644,7 @@ namespace Unity.VectorGraphics.Editor
 
             stepDist = float.MaxValue; // No need for uniform step distance
             #if UNITY_2019_3_OR_NEWER
-            if (SvgType == SVGType.UIElement)
+            if (SvgType == SVGType.UIToolkit)
             {
                 maxCord = Mathf.Max(0.01f, 2.0f * sceneRatio);
                 maxTangent = Mathf.Max(0.1f, 3.0f * sceneRatio);

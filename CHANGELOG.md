@@ -1,5 +1,18 @@
 # Change log
 
+## [2.0.0-preview.13] - 2020-09-08
+
+### Changes
+
+* Moved SVGImage/SVGImageEditor to the Unity.VectorImage namespace
+* Renamed UIElements assets to UI Toolkit assets
+* Added support for rgba() colors
+
+### Fixes
+
+* Fixed WebGL unrepresentable float error during segment length evaluation
+* Fixed image fills not working when defined later in the file
+
 ## [2.0.0-preview.12] - 2020-02-13
 
 ### Changes

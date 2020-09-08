@@ -527,7 +527,10 @@ namespace Unity.VectorGraphics
             {
                 BezierSegment b1, b2;
                 SplitSegment(segment, tmax, out b1, out b2);
-                length += MidPointQuadraticApproxLength(b1);
+                float midPointLength = MidPointQuadraticApproxLength(b1);
+                if (float.IsNaN(midPointLength)) // Could happen because of float precision issues
+                    midPointLength = SegmentLengthIterative(b1);
+                length += midPointLength;
                 segment = b2;
             }
             length += MidPointQuadraticApproxLength(segment);
