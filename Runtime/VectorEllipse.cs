@@ -21,10 +21,20 @@ namespace Unity.VectorGraphics
             float adjustedRy;
             ComputeEllipseParameters(p0, p1, rotation, rx, ry, largeArc, sweep, out c, out theta1, out sweepTheta, out adjustedRx, out adjustedRy);
 
-            var path = VectorUtils.MakeArc(Vector2.zero, theta1, sweepTheta, 1.0f);
+            BezierPathSegment[] path;
+            if (Mathf.Abs(sweepTheta) <= Mathf.Epsilon)
+            {
+                // Use a straight line if the sweep angle is tiny
+                path = VectorUtils.BezierSegmentToPath(VectorUtils.MakeLine(p0, p1));
+            }
+            else
+            {
+                path = VectorUtils.MakeArc(Vector2.zero, theta1, sweepTheta, 1.0f);
 
-            var scaling = new Vector2(adjustedRx, adjustedRy);
-            path = VectorUtils.TransformBezierPath(path, c, rotation, scaling);
+                var scaling = new Vector2(adjustedRx, adjustedRy);
+                path = VectorUtils.TransformBezierPath(path, c, rotation, scaling);                
+            }
+
 
             return path;
         }

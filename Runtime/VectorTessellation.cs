@@ -87,6 +87,9 @@ namespace Unity.VectorGraphics
                 return;
             }
 
+            tessellateOptions.MaxCordDeviation = Mathf.Max(0.0001f, tessellateOptions.MaxCordDeviation);
+            tessellateOptions.MaxTanAngleDeviation = Mathf.Max(0.0001f, tessellateOptions.MaxTanAngleDeviation);
+
             UnityEngine.Profiling.Profiler.BeginSample("TessellatePath");
 
             float[] segmentLengths = VectorUtils.SegmentsLengths(contour.Segments, contour.Closed);

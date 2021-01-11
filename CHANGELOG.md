@@ -1,5 +1,13 @@
 # Change log
 
+## [2.0.0-preview.14] - 2021-01-11
+---
+
+### Fixed
+
+- Fixed path arcs when the sweep angle is very small
+- Sanitized tessellation options to prevent infinite loops
+
 ## [2.0.0-preview.13] - 2020-09-08
 
 ### Changes
