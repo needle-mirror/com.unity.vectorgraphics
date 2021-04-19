@@ -708,6 +708,24 @@ public class SVGParserTests
         Assert.IsNotNull(shape.Fill as GradientFill);
     }
 
+    [Test]
+    public void ImportSVG_CanReferenceClipPathDefinedLater()
+    {
+        string svg =
+        @"<svg width=""758"" height=""844"" viewBox=""0 0 758 844"" fill=""none"" xmlns=""http://www.w3.org/2000/svg"">
+            <rect clip-path=""url(#clip0)"" id=""Rect"" x=""378"" y=""180"" width=""300"" height=""300"" fill=""#95BFD0""/>
+            <defs>
+                <clipPath id=""clip0"">
+                    <rect width=""758"" height=""844"" fill=""white""/>
+                </clipPath>
+            </defs>
+        </svg>";
+
+        var sceneInfo = SVGParser.ImportSVG(new StringReader(svg));
+        var rectNode = sceneInfo.NodeIDs["Rect"];
+        Assert.IsNotNull(rectNode.Clipper);
+    }
+
     [Test, Description("Case 1136667")]
     public void ImportSVG_PolygonSkipsDuplicatedPoints()
     {

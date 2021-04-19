@@ -394,6 +394,8 @@ namespace Unity.VectorGraphics.Editor
             Material mat = MaterialForSVGSprite(sprite);
 
             var gameObject = new GameObject(name);
+            gameObject.transform.name = "transform";
+
             var spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
             spriteRenderer.sprite = sprite;
             spriteRenderer.material = mat;
@@ -416,10 +418,16 @@ namespace Unity.VectorGraphics.Editor
             Material mat = MaterialForSVGSprite(sprite);
 
             var gameObject = new GameObject(name);
-            gameObject.AddComponent<CanvasRenderer>();
-            gameObject.AddComponent<RectTransform>();
+            gameObject.transform.name = "transform";
+
+            var cr = gameObject.AddComponent<CanvasRenderer>();
+            cr.name = "canvasRenderer";
+
+            var rt = gameObject.AddComponent<RectTransform>();
+            rt.name = "rectTransform";
 
             var svgImage = gameObject.AddComponent<SVGImage>();
+            svgImage.name = "svgImage";
             svgImage.sprite = sprite;
             svgImage.material = mat;
             svgImage.preserveAspect = PreserveSVGImageAspect;
@@ -429,6 +437,9 @@ namespace Unity.VectorGraphics.Editor
             if (sprite.texture != null)
                 ctx.AddObjectToAsset("texAtlas", sprite.texture);
 
+            ctx.AddObjectToAsset("svgImage", svgImage);
+            ctx.AddObjectToAsset("canvasRenderer", cr);
+            ctx.AddObjectToAsset("rectTransform", rt);
             ctx.AddObjectToAsset("gameObject", gameObject);
             ctx.SetMainObject(gameObject);
         }

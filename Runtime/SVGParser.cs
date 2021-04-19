@@ -883,6 +883,7 @@ namespace Unity.VectorGraphics
         void clipPath()
         {
             var node = docReader.VisitCurrent();
+            string id = node["id"];
 
              // A new scene node instead of one precreated for us
             var clipRoot = new SceneNode() {
@@ -915,6 +916,18 @@ namespace Unity.VectorGraphics
             ParseChildren(node, node.Name);
             if (currentSceneNode.Pop() != clipRoot)
                 throw SVGFormatException.StackError;
+            
+            // Resolve any previous node that was referencing this clipping path
+            if (!string.IsNullOrEmpty(id))
+            {
+                List<PostponedClip> clips;
+                if (postponedClip.TryGetValue(id, out clips))
+                {
+                    foreach (var clip in clips)
+                        ApplyClipper(clipRoot, clip.node, relativeToWorld);
+                }
+            }
+
         }
 
         void pattern()
@@ -1844,14 +1857,34 @@ namespace Unity.VectorGraphics
                 return;
 
             var clipper = SVGAttribParser.ParseRelativeRef(reference, svgObjects) as SceneNode;
+            if (clipper == null && reference.Length > 1 && reference.StartsWith("#"))
+            {
+                // Clipper may be defined later in the file
+                List<PostponedClip> clips;
+                if (!postponedClip.TryGetValue(reference, out clips))
+                    clips = new List<PostponedClip>(1);
+                clips.Add(new PostponedClip() { node = sceneNode });
+                postponedClip[reference.Substring(1)] = clips;
+                return;
+            }
             var clipperRoot = clipper;
 
+            bool worldRelative = true;
             ClipData data;
-            if (clipData.TryGetValue(clipper, out data) && !data.WorldRelative)
+            if (clipData.TryGetValue(clipper, out data))
+                worldRelative = data.WorldRelative;
+
+            ApplyClipper(clipper, sceneNode, worldRelative);
+        }
+
+        void ApplyClipper(SceneNode clipper, SceneNode target, bool worldRelative)
+        {
+            SceneNode clipperRoot = clipper;
+            if (!worldRelative)
             {
                 // If the referenced clip path units is in bounding-box space, we add an intermediate
                 // node to scale the content to the correct size.
-                var rect = VectorUtils.SceneNodeBounds(sceneNode);
+                var rect = VectorUtils.SceneNodeBounds(target);
                 var transform = Matrix2D.Translate(rect.position) * Matrix2D.Scale(rect.size);
 
                 clipperRoot = new SceneNode() {
@@ -1859,8 +1892,7 @@ namespace Unity.VectorGraphics
                     Transform = transform
                 };
             }
-
-            sceneNode.Clipper = clipperRoot;
+            target.Clipper = clipperRoot;
         }
 
         void ParseMask(XmlReaderIterator.Node node, SceneNode sceneNode)
@@ -2249,6 +2281,7 @@ namespace Unity.VectorGraphics
         Dictionary<SceneNode, MaskData> maskData = new Dictionary<SceneNode, MaskData>();
         Dictionary<string, List<NodeReferenceData>> postponedSymbolData = new Dictionary<string, List<NodeReferenceData>>();
         Dictionary<string, List<PostponedStopData>> postponedStopData = new Dictionary<string, List<PostponedStopData>>();
+        Dictionary<string, List<PostponedClip>> postponedClip = new Dictionary<string, List<PostponedClip>>();
         SVGPostponedFills postponedFills = new SVGPostponedFills();
         List<NodeWithParent> invisibleNodes = new List<NodeWithParent>();
         Stack<Vector2> currentContainerSize = new Stack<Vector2>();
@@ -2320,6 +2353,11 @@ namespace Unity.VectorGraphics
         struct PostponedStopData
         {
             public GradientFill fill;
+        }
+
+        struct PostponedClip
+        {
+            public SceneNode node;
         }
     }
 

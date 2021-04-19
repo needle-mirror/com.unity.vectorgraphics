@@ -1,7 +1,13 @@
 # Change log
 
+## [2.0.0-preview.15] - 2021-04-19
+
+### Fixed
+
+- Fixed prefab transform reset during asset rename
+- Added missing dependencies in package.json
+
 ## [2.0.0-preview.14] - 2021-01-11
----
 
 ### Fixed
 
