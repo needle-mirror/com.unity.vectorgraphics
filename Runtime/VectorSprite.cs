@@ -111,11 +111,7 @@ namespace Unity.VectorGraphics
 
             var pivot = GetPivot(alignment, customPivot, rect, flipYAxis);
 
-            // The Sprite.Create(Rect, Vector2, float, Texture2D) method is internal. Using reflection
-            // until it becomes public.
-            var spriteCreateMethod = typeof(Sprite).GetMethod("Create", BindingFlags.Static | BindingFlags.NonPublic, Type.DefaultBinder, new Type[] { typeof(Rect), typeof(Vector2), typeof(float), typeof(Texture2D) }, null);
-            var sprite = spriteCreateMethod.Invoke(null, new object[] { rect, pivot, svgPixelsPerUnit, texture }) as Sprite;
-
+            var sprite = InternalBridge.CreateSprite(rect, pivot, svgPixelsPerUnit, texture);
             sprite.OverrideGeometry(vertices.ToArray(), indices.ToArray());
 
             if (colors != null)

@@ -1,7 +1,9 @@
 {
     "name": "Unity.VectorGraphics",
+    "rootNamespace": "",
     "references": [
-        "GUID:2bafac87e7f4b9b418d9448d219b01ab"
+        "GUID:2bafac87e7f4b9b418d9448d219b01ab",
+        "GUID:23e4d4cdb75716543b20190a2c20c09a"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -10,5 +12,6 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": []
+    "versionDefines": [],
+    "noEngineReferences": false
 }

@@ -510,7 +510,7 @@ namespace Unity.VectorGraphics.Editor
         {
             UnityEngine.Object asset;
             Texture2D texAtlas;
-            Unity.VectorGraphics.InternalBridge.MakeVectorImageAsset(geometry, GradientResolution, out asset, out texAtlas);
+            VectorImageUtils.MakeVectorImageAsset(geometry, GradientResolution, out asset, out texAtlas);
 
             if (asset == null)
             {

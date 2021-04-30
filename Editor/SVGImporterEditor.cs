@@ -508,10 +508,11 @@ namespace Unity.VectorGraphics.Editor
                 UInt16[] indices = null;
                 Vector2[] uvs = null;
                 Color[] colors = null;
-                Vector2[] settings = null;
+                Vector2[] settingIndices = null;
                 Texture2D atlas = null;
                 Vector2 size = Vector2.zero;
-                if (InternalBridge.GetDataFromVectorImage(assetTarget, ref vertices, ref indices, ref uvs, ref colors, ref settings, ref atlas, ref size))
+                InternalBridge.GradientSettingsBridge[] settings = null;
+                if (InternalBridge.GetDataFromVectorImage(assetTarget, ref vertices, ref indices, ref uvs, ref colors, ref settingIndices, ref settings, ref atlas, ref size))
                 {
                     vectorImage = assetTarget;
                     vectorImageAtlas = atlas;
@@ -554,13 +555,14 @@ namespace Unity.VectorGraphics.Editor
                 UInt16[] indices = null;
                 Vector2[] uvs = null;
                 Color[] colors = null;
-                Vector2[] settings = null;
+                Vector2[] settingIndices = null;
                 Texture2D atlas = null;
                 Vector2 size = Vector2.zero;
-                if (InternalBridge.GetDataFromVectorImage(obj, ref vertices, ref indices, ref uvs, ref colors, ref settings, ref atlas, ref size))
+                InternalBridge.GradientSettingsBridge[] settings = null;
+                if (InternalBridge.GetDataFromVectorImage(obj, ref vertices, ref indices, ref uvs, ref colors, ref settingIndices, ref settings, ref atlas, ref size))
                 {
                     var mat = SVGImporter.CreateSVGSpriteMaterial(atlas != null);
-                    previewTex = InternalBridge.RenderVectorImageToTexture2D(obj, width, height, mat, 4);
+                    previewTex = VectorImageUtils.RenderVectorImageToTexture2D(obj, width, height, mat, 4);
                     Material.DestroyImmediate(mat);
                 }
             }

@@ -1,5 +1,11 @@
 # Change log
 
+## [2.0.0-preview.16] - 2021-04-30
+
+### Fixed
+
+- Fixed null-reference exception occurring in IL2CPP builds
+
 ## [2.0.0-preview.15] - 2021-04-19
 
 ### Fixed

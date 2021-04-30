@@ -4,3 +4,4 @@
 [assembly: InternalsVisibleTo("Unity.VectorGraphics.Editor")]
 [assembly: InternalsVisibleTo("Unity.VectorGraphics.Editor.Tests")]
 [assembly: InternalsVisibleTo("Unity.InternalAPIEngineBridge.003")]
+[assembly: InternalsVisibleTo("Unity.InternalAPIEditorBridge.003")]
