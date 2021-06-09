@@ -1,5 +1,11 @@
 # Change log
 
+## [2.0.0-preview.17] - 2021-06-09
+
+### Fixed
+
+- Fixed missing stats over vector sprite asset preview
+
 ## [2.0.0-preview.16] - 2021-04-30
 
 ### Fixed

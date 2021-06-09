@@ -472,6 +472,8 @@ namespace Unity.VectorGraphics.Editor
             return true;
         }
 
+        protected override bool useAssetDrawPreview { get { return false; } }
+
         public override Texture2D RenderStaticPreview(string assetPath, UnityEngine.Object[] subAssets, int width, int height)
         {
             var obj = AssetDatabase.LoadMainAssetAtPath(assetPath);
