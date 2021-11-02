@@ -3036,7 +3036,7 @@ namespace Unity.VectorGraphics
                 throw new Exception(attribName + " specification ended before sufficing numbers required by the last pathCommand");
 
             int startPos = stringPos;
-            if (attribString[stringPos] == '-')
+            if (attribString[stringPos] == '-' || attribString[stringPos] == '+')
                 stringPos++; // Skip over the negative sign if it exists
 
             bool gotPeriod = false;

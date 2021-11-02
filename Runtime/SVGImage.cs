@@ -12,6 +12,7 @@ namespace Unity.VectorGraphics
     /// <summary>A UI image that holds SVG content.</summary>
     [AddComponentMenu("UI/SVG Image", 11)]
     [MovedFrom("")]
+    [RequireComponent(typeof(CanvasRenderer))]
     public class SVGImage : MaskableGraphic
     {
         [SerializeField] private Sprite m_Sprite = null;

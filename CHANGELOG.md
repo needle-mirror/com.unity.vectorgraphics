@@ -1,5 +1,13 @@
 # Change log
 
+## [2.0.0-preview.18] - 2021-11-02
+
+### Fixed
+
+- Fixed SVGImage content not updating because of missing CanvasRenderer
+- Fixed wrong path winding order, causing masking issues with UI Toolkit.
+- Fixed support for '+' prefix in path definition (used by Vectornator)
+
 ## [2.0.0-preview.17] - 2021-06-09
 
 ### Fixed

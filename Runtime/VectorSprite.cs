@@ -226,27 +226,22 @@ namespace Unity.VectorGraphics
 
         internal static void AdjustWinding(Vector2[] vertices, UInt16[] indices, WindingDir dir)
         {
-            bool shouldFlip = false;
-            var length = indices.Length;
-            for (int i = 0; i < (length - 2); i += 3)
+            int indexCount = indices.Length;
+            for (int i = 0; i < indexCount; i += 3)
             {
-                var v0 = (Vector3)vertices[indices[i]];
-                var v1 = (Vector3)vertices[indices[i+1]];
-                var v2 = (Vector3)vertices[indices[i+2]];
-                var s = (v1 - v0).normalized;
-                var t = (v2 - v0).normalized;
-                float dot = Vector3.Dot(s, t);
-                if (s == Vector3.zero || t == Vector3.zero || dot > 0.9999f || dot < -0.9999f)
-                    continue;
-                var n = Vector3.Cross(s, t);
-                if (n.sqrMagnitude < 0.0001f)
-                    continue;
-                shouldFlip = dir == WindingDir.CCW ? n.z < 0.0f : n.z > 0.0f;
-                break;
-            }
-            if (shouldFlip)
-            {
-                for (int i = 0; i < (length - 2); i += 3)
+                var i0 = indices[i];
+                var i1 = indices[i+1];
+                var i2 = indices[i+2];
+                var v0 = (Vector3)vertices[i0];
+                var v1 = (Vector3)vertices[i1];
+                var v2 = (Vector3)vertices[i2];
+
+                var s = (v1 - v0);
+                var t = (v2 - v0);
+                var crossZ = s.x * t.y - s.y * t.x;
+
+                bool shouldFlip = dir == WindingDir.CCW ? crossZ < 0.0f : crossZ > 0.0f;
+                if (shouldFlip)
                 {
                     var tmp = indices[i];
                     indices[i] = indices[i+1];

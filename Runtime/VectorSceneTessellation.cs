@@ -173,6 +173,7 @@ namespace Unity.VectorGraphics
                     Vector2[] strokeVerts;
                     UInt16[] strokeIndices;
                     VectorUtils.TessellatePath(c, vectorShape.PathProps, tessellationOptions, out strokeVerts, out strokeIndices);
+                    VectorUtils.AdjustWinding(strokeVerts, strokeIndices, VectorUtils.WindingDir.CCW);
                     if (strokeIndices.Length > 0)
                     {
                         geoms.Add(new Geometry() { Vertices = strokeVerts, Indices = strokeIndices, Color = strokeColor, Fill = strokeFill, FillTransform = stroke.FillTransform });
