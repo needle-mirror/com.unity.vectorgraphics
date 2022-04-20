@@ -599,6 +599,8 @@ namespace Unity.VectorGraphics
             if (fill == null)
                 fill = new GradientFill() { Addressing = addressing, Type = GradientFillType.Linear };
 
+            fill.Type = GradientFillType.Linear;
+
             LinearGradientExData fillExData = new LinearGradientExData() { WorldRelative = relativeToWorld, FillTransform = gradientTransform };
             gradientExInfo[fill] = fillExData;
 
@@ -840,6 +842,8 @@ namespace Unity.VectorGraphics
             GradientFill fill = CloneGradientFill(refFill);
             if (fill == null)
                 fill = new GradientFill() { Addressing = addressing, Type = GradientFillType.Radial };
+
+            fill.Type = GradientFillType.Radial;
 
             RadialGradientExData fillExData = new RadialGradientExData() { WorldRelative = relativeToWorld, FillTransform = gradientTransform };
             gradientExInfo[fill] = fillExData;
@@ -2705,11 +2709,44 @@ namespace Unity.VectorGraphics
                     Byte.Parse(numbers[2]) / divisor,
                     divisor == 100.0f ? Byte.Parse(numbers[3]) / divisor : ParseFloat(numbers[3]));
             }
+            else if(colorString.StartsWith("hsl(") && colorString.EndsWith(")"))
+            {
+                string numbersString = colorString.Substring(4, colorString.Length-5);
+                string[] numbers = numbersString.Split(new char[] { ',', '%' }, StringSplitOptions.RemoveEmptyEntries);
+                if (numbers.Length != 3)
+                    throw new Exception("Invalid hsl() color specification");
+
+                float hue = ParseFloat(numbers[0]) / 360.0f;
+                float saturation = ParseFloat(numbers[1]) / 100.0f;
+                float lightness = ParseFloat(numbers[2]) / 100.0f;
+
+                return HSLToRGB(hue, saturation, lightness);
+            }
 
             // Named color
             if (namedColors == null)
                 namedColors = new NamedWebColorDictionary();
             return namedColors[colorString.ToLower()];
+        }
+
+        private static float HueToValue(float p, float q, float t)
+        {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < (1.0f/6.0f)) return p + (q - p) * 6 * t;
+            if (t < 0.5f) return q;
+            if (t < (2.0f/3.0f)) return p + (q - p) * (2.0f/3.0f - t) * 6.0f;
+            return p;
+        }
+
+        private static Color HSLToRGB(float hue, float saturation, float lightness)
+        {
+            float q = (lightness < 0.5f) ? lightness * (1 + saturation) : lightness + saturation - lightness * saturation;
+            float p = 2.0f * lightness - q;
+            float r = HueToValue(p, q, hue + 1.0f/3.0f);
+            float g = HueToValue(p, q, hue);
+            float b = HueToValue(p, q, hue - 1.0f/3.0f);
+            return new Color(r, g, b);
         }
 
         public static string ParseURLRef(string url)

@@ -28,6 +28,7 @@
             #pragma vertex GradientVert
             #pragma fragment GradientFrag
             #pragma multi_compile_instancing
+            #pragma multi_compile _ SKIP_ALPHA_PREMULTIPLY
 
             #include "UnityCG.cginc"
             #include "VectorGradient.cginc"
@@ -94,7 +95,10 @@
                 #endif
 
                 fixed4 finalColor = gradColor * i.color;
+
+                #ifndef SKIP_ALPHA_PREMULTIPLY
                 finalColor.rgb *= finalColor.a;
+                #endif
 
                 return finalColor;
             }

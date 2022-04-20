@@ -1,6 +1,6 @@
 {
   "name": "com.unity.vectorgraphics",
-  "version": "2.0.0-preview.18",
+  "version": "2.0.0-preview.19",
   "unity": "2019.2",
   "displayName": "Vector Graphics",
   "description": "The vector graphics package provides an SVG importer and runtime vector graphics APIs.",
@@ -27,9 +27,12 @@
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.vectorgraphics.git",
     "type": "git",
-    "revision": "a9137344b248ad63ef9c703e2b0908a0ad34a18d"
+    "revision": "6bc60bb08ff401a6569ee85ab6f75abf368b740b"
   },
   "upmCi": {
-    "footprint": "f7117f7ba31810b7a068f937405d3b5afb2cb10e"
+    "footprint": "15752201444bfb7fdf011e62c38a32aa53f095ce"
+  },
+  "_upm": {
+    "changelog": "### Fixed\r\n\r\n* Fixed textured sprite alpha issue (case 1411243).\r\n* Fixed gradient fill type after cloning.\r\n\r\n### Changes\r\n\r\n* Added HSL color support."
   }
 }

@@ -1,38 +1,49 @@
 # Change log
 
+## [2.0.0-preview.19] - 2022-04-20
+
+### Fixed
+
+* Fixed textured sprite alpha issue (case 1411243).
+* Fixed gradient fill type after cloning.
+
+### Changes
+
+* Added HSL color support.
+
 ## [2.0.0-preview.18] - 2021-11-02
 
 ### Fixed
 
-- Fixed SVGImage content not updating because of missing CanvasRenderer
-- Fixed wrong path winding order, causing masking issues with UI Toolkit.
-- Fixed support for '+' prefix in path definition (used by Vectornator)
+* Fixed SVGImage content not updating because of missing CanvasRenderer
+* Fixed wrong path winding order, causing masking issues with UI Toolkit.
+* Fixed support for '+' prefix in path definition (used by Vectornator)
 
 ## [2.0.0-preview.17] - 2021-06-09
 
 ### Fixed
 
-- Fixed missing stats over vector sprite asset preview
+* Fixed missing stats over vector sprite asset preview
 
 ## [2.0.0-preview.16] - 2021-04-30
 
 ### Fixed
 
-- Fixed null-reference exception occurring in IL2CPP builds
+* Fixed null-reference exception occurring in IL2CPP builds
 
 ## [2.0.0-preview.15] - 2021-04-19
 
 ### Fixed
 
-- Fixed prefab transform reset during asset rename
-- Added missing dependencies in package.json
+* Fixed prefab transform reset during asset rename
+* Added missing dependencies in package.json
 
 ## [2.0.0-preview.14] - 2021-01-11
 
 ### Fixed
 
-- Fixed path arcs when the sweep angle is very small
-- Sanitized tessellation options to prevent infinite loops
+* Fixed path arcs when the sweep angle is very small
+* Sanitized tessellation options to prevent infinite loops
 
 ## [2.0.0-preview.13] - 2020-09-08
 

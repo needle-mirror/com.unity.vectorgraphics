@@ -367,12 +367,15 @@ namespace Unity.VectorGraphics
                 sRGB = QualitySettings.activeColorSpace == ColorSpace.Linear
             };
 
+            var matNoAlphaPremul = new Material(mat);
+            matNoAlphaPremul.EnableKeyword("SKIP_ALPHA_PREMULTIPLY");
+
             if (expandEdges)
             {
                 // Draw the sprite normally to be used as a background, no-antialiasing
                 var normalTex = RenderTexture.GetTemporary(desc);
                 RenderTexture.active = normalTex;
-                RenderSprite(sprite, mat);
+                RenderSprite(sprite, matNoAlphaPremul);
 
                 // Expand the edges and make completely transparent
                 if (s_ExpandEdgesMat == null)
@@ -408,14 +411,14 @@ namespace Unity.VectorGraphics
                 RenderTexture.ReleaseTemporary(expandTex); // Use the expanded texture to clear the buffer
 
                 RenderTexture.active = tex;
-                RenderSprite(sprite, mat, false);
+                RenderSprite(sprite, matNoAlphaPremul, false);
             }
             else
             {
                 desc.msaaSamples = antiAliasing;
                 tex = RenderTexture.GetTemporary(desc);
                 RenderTexture.active = tex;
-                RenderSprite(sprite, mat);
+                RenderSprite(sprite, matNoAlphaPremul);
             }
 
             Texture2D copy = new Texture2D(width, height, TextureFormat.RGBA32, false);
@@ -425,6 +428,8 @@ namespace Unity.VectorGraphics
 
             RenderTexture.active = oldActive;
             RenderTexture.ReleaseTemporary(tex);
+
+            Material.DestroyImmediate(matNoAlphaPremul);
 
             return copy;
         }
