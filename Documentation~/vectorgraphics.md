@@ -17,6 +17,8 @@ The SVG importer in this package implements a subset of the SVG 1.1 specificatio
 * Any interactivity feature are not supported [(SVG 1.1 section 16)](https://www.w3.org/TR/SVG11/interact.html)
 * Animations are not supported [(SVG 1.1 section 19)](https://www.w3.org/TR/SVG11/animate.html)
 
+Note that the package may not import asset properly when starting Unity with the `-no-graphics` command-line argument. The package requires graphics when importing assets in texture format, since it will need to render the vector content into the texture asset.
+
 # Using Vector Graphics
 
 ## SVG importer

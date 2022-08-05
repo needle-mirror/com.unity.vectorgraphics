@@ -9,7 +9,6 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: Unlit_VectorUI
   m_Shader: {fileID: 4800000, guid: 37dcb9817fd5d704a94e096556e42e0f, type: 3}
-  m_ShaderKeywords: ETC1_EXTERNAL_ALPHA
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0

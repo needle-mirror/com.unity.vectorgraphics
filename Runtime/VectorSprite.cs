@@ -367,15 +367,12 @@ namespace Unity.VectorGraphics
                 sRGB = QualitySettings.activeColorSpace == ColorSpace.Linear
             };
 
-            var matNoAlphaPremul = new Material(mat);
-            matNoAlphaPremul.EnableKeyword("SKIP_ALPHA_PREMULTIPLY");
-
             if (expandEdges)
             {
                 // Draw the sprite normally to be used as a background, no-antialiasing
                 var normalTex = RenderTexture.GetTemporary(desc);
                 RenderTexture.active = normalTex;
-                RenderSprite(sprite, matNoAlphaPremul);
+                RenderSprite(sprite, mat);
 
                 // Expand the edges and make completely transparent
                 if (s_ExpandEdgesMat == null)
@@ -411,25 +408,38 @@ namespace Unity.VectorGraphics
                 RenderTexture.ReleaseTemporary(expandTex); // Use the expanded texture to clear the buffer
 
                 RenderTexture.active = tex;
-                RenderSprite(sprite, matNoAlphaPremul, false);
+                RenderSprite(sprite, mat, false);
             }
             else
             {
                 desc.msaaSamples = antiAliasing;
                 tex = RenderTexture.GetTemporary(desc);
                 RenderTexture.active = tex;
-                RenderSprite(sprite, matNoAlphaPremul);
+                RenderSprite(sprite, mat);
             }
 
             Texture2D copy = new Texture2D(width, height, TextureFormat.RGBA32, false);
             copy.hideFlags = HideFlags.HideAndDontSave;
             copy.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+
+            // Undo alpha-premultiplication, otherwise it will be applied again when rendered with the Sprite/Default shader
+            var pixels = copy.GetPixels();
+            for (int i = 0; i < pixels.Length; i++) {
+                var c = pixels[i];
+                if (c.a == 0) {
+                    continue;
+                }
+                c.r = c.r / c.a;
+                c.g = c.g / c.a;
+                c.b = c.b / c.a;
+                pixels[i] = c;
+            }
+            copy.SetPixels(pixels);
+
             copy.Apply();
 
             RenderTexture.active = oldActive;
             RenderTexture.ReleaseTemporary(tex);
-
-            Material.DestroyImmediate(matNoAlphaPremul);
 
             return copy;
         }

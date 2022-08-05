@@ -64,7 +64,7 @@
             fixed4 frag (v2f i) : SV_Target
             {
                 float2 step = _MainTex_TexelSize.xy;
-                fixed4 col = tex2D(_MainTex, i.uv);
+                fixed4 col = tex2Dlod(_MainTex, float4(i.uv, 0, 0));
                 if (col.r != 0.0f || col.g != 0.0f || col.b != 0.0f || col.a != 0.0f)
                     return fixed4(col.rgb, 0.0f);
 
@@ -72,7 +72,7 @@
                 for (int tap = 0; tap < 8; ++tap)
                 {
                     float2 uv = i.uv + kDirs[tap] * step;
-                    fixed4 texCol = tex2D(_MainTex, uv);
+                    fixed4 texCol = tex2Dlod(_MainTex, float4(uv, 0, 0));
                     if (texCol.a > 0.0f)
                     {
                         c = texCol;

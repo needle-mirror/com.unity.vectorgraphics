@@ -1,5 +1,13 @@
 # Change log
 
+## [2.0.0-preview.20] - 2022-08-05
+
+### Fixed
+
+* Remove forced keyword ETC1_EXTERNAL_ALPHA in Unlit/Vector materials [UUM-836 > UUM-10248]
+* Fixed gradient instructions used in for-loop shader warnings
+* Fixed broken alpha-blending when importing in textured asset [VGB-1]
+
 ## [2.0.0-preview.19] - 2022-04-20
 
 ### Fixed

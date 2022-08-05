@@ -31,12 +31,11 @@
         {
         CGPROGRAM
             #pragma vertex VectorVert
-            #pragma fragment VectorFrag
+            #pragma fragment SpriteFrag
             #pragma target 2.0
             #pragma multi_compile_instancing
             #pragma multi_compile _ PIXELSNAP_ON
             #pragma multi_compile _ ETC1_EXTERNAL_ALPHA
-            #pragma multi_compile _ SKIP_ALPHA_PREMULTIPLY
             #include "UnitySprites.cginc"
 
             v2f VectorVert(appdata_t IN)
@@ -63,29 +62,6 @@
                 #endif
 
                 return OUT;
-            }
-
-            fixed4 SampleVectorSpriteTexture(float2 uv)
-            {
-                fixed4 color = tex2D(_MainTex, uv);
-
-            #if ETC1_EXTERNAL_ALPHA
-                fixed4 alpha = tex2D(_AlphaTex, uv);
-                color.a = lerp (color.a, alpha.r, _EnableExternalAlpha);
-            #endif
-
-                return color;
-            }
-
-            fixed4 VectorFrag(v2f IN) : SV_Target
-            {
-                fixed4 c = SampleVectorSpriteTexture(IN.texcoord) * IN.color;
-
-                #ifndef SKIP_ALPHA_PREMULTIPLY
-                c.rgb *= c.a;
-                #endif
-
-                return c;
             }
         ENDCG
         }

@@ -48,6 +48,7 @@
                 Varying o;
                 o.vertex = UnityObjectToClipPos(i.vertex);
                 o.color = i.color;
+                o.uv = i.uv;
                 return o;
             }
 
@@ -86,20 +87,21 @@
                 Varying output;
                 output.vertex = UnityObjectToClipPos(i.vertex);
                 output.uv = TRANSFORM_TEX(i.uv, _MainTex);
+                output.color = i.color;
                 return output;
             }
 
             half4 frag(Varying i) : SV_Target
             {
                 float2 step = _MainTex_TexelSize.xy;
-                fixed4 c = tex2D(_MainTex, i.uv);
+                fixed4 c = tex2Dlod(_MainTex, float4(i.uv, 0, 0));
                 if (c.a == 1.0f)
                     return c;
 
                 for (int tap = 0; tap < 8; ++tap)
                 {
                     float2 uv = i.uv + kDirs[tap] * step;
-                    fixed4 texCol = tex2D(_MainTex, uv);
+                    fixed4 texCol = tex2Dlod(_MainTex, float4(uv, 0, 0));
                     if (texCol.a == 1.0f)
                     {
                         c = texCol;

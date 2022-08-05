@@ -9,7 +9,6 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: Unlit_VectorGradientUI
   m_Shader: {fileID: 4800000, guid: 8863b1c186011cc4ebe0ba4043066adc, type: 3}
-  m_ShaderKeywords: ETC1_EXTERNAL_ALPHA
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
