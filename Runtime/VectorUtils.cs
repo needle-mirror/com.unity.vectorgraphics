@@ -846,9 +846,9 @@ namespace Unity.VectorGraphics
             }
 
             float detSqrt = Mathf.Sqrt(det);
-            s1 = (-b + detSqrt) / 2.0f * a;
+            s1 = (-b + detSqrt) / (2.0f * a);
             if (Mathf.Abs(a) > float.Epsilon)
-                s2 = (-b - detSqrt) / 2.0f * a;
+                s2 = (-b - detSqrt) / (2.0f * a);
             else s2 = float.NaN;
         }
 

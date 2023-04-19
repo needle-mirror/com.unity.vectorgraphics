@@ -10,7 +10,7 @@ namespace Unity.VectorGraphics
 #if UNITY_2019_3_OR_NEWER
     internal static class VectorImageUtils
     {
-        internal static void MakeVectorImageAsset(IEnumerable<VectorUtils.Geometry> geoms, uint rasterSize, out UnityEngine.Object outAsset, out Texture2D outTexAtlas)
+        internal static void MakeVectorImageAsset(IEnumerable<VectorUtils.Geometry> geoms, Rect rect, uint rasterSize, out UnityEngine.Object outAsset, out Texture2D outTexAtlas)
         {
             var atlas = VectorUtils.GenerateAtlas(geoms, rasterSize, false, false);
             if (atlas != null)
@@ -123,7 +123,29 @@ namespace Unity.VectorGraphics
                 }
             }
 
-            outAsset = InternalBridge.MakeVectorImageAsset(vertices, indices, outTexAtlas, settings, bounds.size);
+            if (rect == Rect.zero)
+                rect = bounds;
+            else
+            {
+                var offset = bounds.position - rect.position;
+
+                for (int i = 0; i < vertices.Count; ++i)
+                {
+                    var v = vertices[i];
+                    var p = (Vector2)v.position;
+                    
+                    // Apply offset
+                    p += offset;
+
+                    // Clamp
+                    p = Vector2.Max(rect.min, Vector2.Min(rect.max, p));
+
+                    v.position = new Vector3(p.x, p.y, v.position.z);
+                    vertices[i] = v;
+                }
+            }
+
+            outAsset = InternalBridge.MakeVectorImageAsset(vertices, indices, outTexAtlas, settings, rect);
         }
 
         internal static Texture2D RenderVectorImageToTexture2D(UnityEngine.Object o, int width, int height, Material mat, int antiAliasing = 1)

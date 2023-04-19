@@ -41,7 +41,7 @@ namespace Unity.VectorGraphics
             Mirror = 2
         }
 
-        internal static UnityEngine.Object MakeVectorImageAsset(IEnumerable<VectorImageVertexBridge> vertices, IEnumerable<UInt16> indices, Texture2D atlas, IEnumerable<GradientSettingsBridge> settings, Vector2 size)
+        internal static UnityEngine.Object MakeVectorImageAsset(IEnumerable<VectorImageVertexBridge> vertices, IEnumerable<UInt16> indices, Texture2D atlas, IEnumerable<GradientSettingsBridge> settings, Rect rect)
         {
             var vectorImage = ScriptableObject.CreateInstance<VectorImage>();
             vectorImage.vertices = vertices.Select(v => new VectorImageVertex() {
@@ -58,7 +58,7 @@ namespace Unity.VectorGraphics
                     radialFocus = s.radialFocus,
                     location = s.location
                 }).ToArray();
-            vectorImage.size = size;
+            vectorImage.size = rect.size;
             return vectorImage;
         }
 

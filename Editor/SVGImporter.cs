@@ -341,7 +341,7 @@ namespace Unity.VectorGraphics.Editor
                     break;
 #if UNITY_2019_3_OR_NEWER
                 case SVGType.UIToolkit:
-                    GenerateVectorImageAsset(ctx, geometry, name);
+                    GenerateVectorImageAsset(ctx, geometry, name, rect);
                     break;
 #endif
                 default:
@@ -506,11 +506,11 @@ namespace Unity.VectorGraphics.Editor
         }
 
 #if UNITY_2019_3_OR_NEWER
-        private void GenerateVectorImageAsset(AssetImportContext ctx, List<VectorUtils.Geometry> geometry, string name)
+        private void GenerateVectorImageAsset(AssetImportContext ctx, List<VectorUtils.Geometry> geometry, string name, Rect rect)
         {
             UnityEngine.Object asset;
             Texture2D texAtlas;
-            VectorImageUtils.MakeVectorImageAsset(geometry, GradientResolution, out asset, out texAtlas);
+            VectorImageUtils.MakeVectorImageAsset(geometry, rect, GradientResolution, out asset, out texAtlas);
 
             if (asset == null)
             {

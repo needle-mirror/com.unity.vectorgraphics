@@ -1,5 +1,12 @@
 # Change log
 
+## [2.0.0-preview.21] - 2023-04-19
+
+### Fixed
+
+* Fixed flags parsing in paths [VGB-5]
+* Added support to preserve viewport when importing in UI Toolkit Vector Image [VGB-3]
+
 ## [2.0.0-preview.20] - 2022-08-05
 
 ### Fixed

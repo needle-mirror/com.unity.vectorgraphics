@@ -1,6 +1,6 @@
 {
   "name": "com.unity.vectorgraphics",
-  "version": "2.0.0-preview.20",
+  "version": "2.0.0-preview.21",
   "unity": "2019.2",
   "displayName": "Vector Graphics",
   "description": "The vector graphics package provides an SVG importer and runtime vector graphics APIs.",
@@ -24,12 +24,16 @@
     "com.unity.modules.unitywebrequesttexture": "1.0.0",
     "com.unity.modules.unitywebrequestwww": "1.0.0"
   },
-  "upmCi": {
-    "footprint": "47c7e07d4b8d391684c32aca37331b6dc33811f8"
+  "_upm": {
+    "changelog": "### Fixed\n\n* Fixed flags parsing in paths [VGB-5]\n* Added support to preserve viewport when importing in UI Toolkit Vector Image [VGB-3]"
   },
+  "upmCi": {
+    "footprint": "fbb92c6629c513214c2887d3989a2fdfd0a0bb69"
+  },
+  "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.vectorgraphics@2.0/manual/index.html",
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.vectorgraphics.git",
     "type": "git",
-    "revision": "46f858dcbbb7fedd1ed5b99b16e7d7e31148946c"
+    "revision": "29dd9edba277a3e862dd76e160b4c92345069f88"
   }
 }

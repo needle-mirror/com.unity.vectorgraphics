@@ -2,6 +2,8 @@
 
 The Vector Graphics package provides an SVG importer as well as generic vector graphics APIs.
 
+⚠️ The Vector Graphics package is considered experimental and is not recommended to be used in production. Therefore, the package must be added using the `com.unity.vectorgraphics` name as described in the [Unity Package Manager manual](https://docs.unity3d.com/Packages/Installation/manual/upm-ui-quick.html).
+
 ## Requirements
 
 This Vector Graphics package version 1.0.0 is compatible with the following versions of the Unity Editor:

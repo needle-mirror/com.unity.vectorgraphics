@@ -3114,7 +3114,30 @@ namespace Unity.VectorGraphics
 
         bool NextBool()
         {
-            return Mathf.Abs(NextFloat()) > VectorUtils.Epsilon;
+            bool result = false;
+            bool error = false;
+
+            SkipWhitespaces();
+
+            if (stringPos < attribString.Length)
+            {
+                var c = attribString[stringPos];
+                ++stringPos;
+
+                if (c != '0' && c != '1')
+                    error = true;
+                else
+                    result = c == '1';
+            }
+            else
+            {
+                error = true;
+            }
+            
+            if (error)
+                throw new Exception("Expected bool at " + stringPos + " of " + attribName + " specification");
+
+            return result;
         }
 
         char NextPathCommand(bool noCommandInheritance = false)
