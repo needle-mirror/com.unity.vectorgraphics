@@ -1,5 +1,17 @@
 # Change log
 
+## [2.0.0-preview.23] - 2024-01-16
+
+### Fixed
+
+* Fixed bad interaction between alpha-demultiplication and edge expansions
+
+## [2.0.0-preview.22] - 2024-01-16
+
+### Fixed
+
+* Fixed textured sprites edge artifacts [VGB-9]
+
 ## [2.0.0-preview.21] - 2023-04-19
 
 ### Fixed

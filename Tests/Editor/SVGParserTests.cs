@@ -499,6 +499,7 @@ public class SVGParserTests
         Assert.IsNull(shape.Fill);
     }
 
+    [Test]
     public void ImportSVG_UseCannotOverrideFillOnSymbolWitNoneFill()
     {
         string svg =
@@ -514,6 +515,7 @@ public class SVGParserTests
         Assert.IsNull(shape.Fill);            
     }
 
+    [Test]
     public void ImportSVG_UseCannotOverrideFillOnSymbolWithBlackFill()
     {
         string svg =

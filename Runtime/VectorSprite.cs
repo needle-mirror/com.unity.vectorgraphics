@@ -345,6 +345,26 @@ namespace Unity.VectorGraphics
         }
 
         private static Material s_ExpandEdgesMat;
+        private static Material s_DemulMat;
+        private static Material s_BlendMat;
+
+        private static Material CreateMaterialForShaderName(string shaderName, string backupPath)
+        {
+            var shader = Shader.Find(shaderName);
+            if (shader == null)
+            {
+#if UNITY_EDITOR
+                // Workaround for case 1167309.
+                // Shader.Find() seems to fail on the package shader when doing a fresh import with a clean Library folder,
+                // but AssetDatabase.LoadAssetAtPath() works fine though.
+                shader = UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>(backupPath);
+
+#else
+                return null;
+#endif
+            }
+            return new Material(shader);
+        }
 
         /// <summary>Renders a vector sprite to Texture2D.</summary>
         /// <param name="sprite">The sprite to render</param>
@@ -359,83 +379,61 @@ namespace Unity.VectorGraphics
             if (width <= 0 || height <= 0)
                 return null;
 
-            RenderTexture tex = null;
             var oldActive = RenderTexture.active;
 
             var desc = new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32, 0) {
-                msaaSamples = 1,
+                msaaSamples = antiAliasing,
                 sRGB = QualitySettings.activeColorSpace == ColorSpace.Linear
             };
 
+            var sourceTex = RenderTexture.GetTemporary(desc);
+            RenderTexture.active = sourceTex;
+            GL.Clear(true, true, Color.clear);
+            RenderSprite(sprite, mat);
+
+            // The rendered sprite is in premultipled form, so we need to convert it back to straight alpha
+            // before further processing.
+            if (s_DemulMat == null)
+                s_DemulMat = CreateMaterialForShaderName("Unlit/VectorDemultiply", "Packages/com.unity.vectorgraphics/Runtime/Shaders/VectorDemultiply.shader");
+
+            desc.msaaSamples = 1;
+            var demulTex = RenderTexture.GetTemporary(desc);
+            RenderTexture.active = demulTex;
+            GL.Clear(true, true, Color.clear);
+            Graphics.Blit(sourceTex, demulTex, s_DemulMat);
+            RenderTexture.ReleaseTemporary(sourceTex);
+
+            RenderTexture tex = demulTex;
+
             if (expandEdges)
             {
-                // Draw the sprite normally to be used as a background, no-antialiasing
-                var normalTex = RenderTexture.GetTemporary(desc);
-                RenderTexture.active = normalTex;
-                RenderSprite(sprite, mat);
+                // Insteads of keeping the sprite blended over transparent black, we will render it over
+                // an expanded version of itself, so that the bilinear filter will interpolate the colors.
 
                 // Expand the edges and make completely transparent
                 if (s_ExpandEdgesMat == null)
-                {
-                    var shader = Shader.Find("Hidden/VectorExpandEdges");
-                    if (shader == null)
-                    {
-#if UNITY_EDITOR
-                        // Workaround for case 1167309.
-                        // Shader.Find() seems to fail on the package shader when doing a fresh import with a clean Library folder,
-                        // but AssetDatabase.LoadAssetAtPath() works fine though.
-                        shader = UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>("Packages/com.unity.vectorgraphics/Runtime/Shaders/VectorExpandEdges.shader");
-#else
-                        return null;
-#endif
-                    }
-                    s_ExpandEdgesMat = new Material(shader);
-                }
+                    s_ExpandEdgesMat = CreateMaterialForShaderName("Hidden/VectorExpandEdges", "Packages/com.unity.vectorgraphics/Runtime/Shaders/VectorExpandEdges.shader");
 
                 var expandTex = RenderTexture.GetTemporary(desc);
                 RenderTexture.active = expandTex;
                 GL.Clear(false, true, Color.clear);
-                Graphics.Blit(normalTex, expandTex, s_ExpandEdgesMat, 0);
-                RenderTexture.ReleaseTemporary(normalTex);
+                Graphics.Blit(demulTex, expandTex, s_ExpandEdgesMat);
 
-                // Draw the sprite again, but clear with the texture rendered in the previous step,
-                // this will make the bilinear filter to interpolate the colors with values different
-                // than "transparent black", which causes black-ish outlines around the shape.
-                desc.msaaSamples = antiAliasing;
-                tex = RenderTexture.GetTemporary(desc);
-                RenderTexture.active = tex;
-                Graphics.Blit(expandTex, tex);
-                RenderTexture.ReleaseTemporary(expandTex); // Use the expanded texture to clear the buffer
+                // Draw the demultiplied sprite again, but over the expanded edges texture
+                if (s_BlendMat == null)
+                    s_BlendMat = CreateMaterialForShaderName("Hidden/VectorBlendMax", "Packages/com.unity.vectorgraphics/Runtime/Shaders/VectorBlendMax.shader");
 
-                RenderTexture.active = tex;
-                RenderSprite(sprite, mat, false);
+                Graphics.Blit(demulTex, expandTex, s_BlendMat);
+                RenderTexture.ReleaseTemporary(demulTex);
+
+                tex = expandTex;
             }
-            else
-            {
-                desc.msaaSamples = antiAliasing;
-                tex = RenderTexture.GetTemporary(desc);
-                RenderTexture.active = tex;
-                RenderSprite(sprite, mat);
-            }
+
+            RenderTexture.active = tex;
 
             Texture2D copy = new Texture2D(width, height, TextureFormat.RGBA32, false);
             copy.hideFlags = HideFlags.HideAndDontSave;
             copy.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-
-            // Undo alpha-premultiplication, otherwise it will be applied again when rendered with the Sprite/Default shader
-            var pixels = copy.GetPixels();
-            for (int i = 0; i < pixels.Length; i++) {
-                var c = pixels[i];
-                if (c.a == 0) {
-                    continue;
-                }
-                c.r = c.r / c.a;
-                c.g = c.g / c.a;
-                c.b = c.b / c.a;
-                pixels[i] = c;
-            }
-            copy.SetPixels(pixels);
-
             copy.Apply();
 
             RenderTexture.active = oldActive;
