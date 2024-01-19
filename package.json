@@ -1,6 +1,6 @@
 {
   "name": "com.unity.vectorgraphics",
-  "version": "2.0.0-preview.23",
+  "version": "2.0.0-preview.24",
   "unity": "2019.4",
   "displayName": "Vector Graphics",
   "description": "The vector graphics package provides an SVG importer and runtime vector graphics APIs.",
@@ -25,15 +25,15 @@
     "com.unity.modules.unitywebrequestwww": "1.0.0"
   },
   "_upm": {
-    "changelog": "### Fixed\n\n* Fixed bad interaction between alpha-demultiplication and edge expansions"
+    "changelog": "### Fixed\n\n* Fixed RenderSpriteToTexture2D not working in builds because of wrong shader name"
   },
   "upmCi": {
-    "footprint": "71f261741699ca289ca9df9381684a1ffb713282"
+    "footprint": "5f6cffab71ebf6a7bfbc13cd9a9bd930e186835d"
   },
   "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.vectorgraphics@2.0/manual/index.html",
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.vectorgraphics.git",
     "type": "git",
-    "revision": "c369001ea38b6d1ec45ed4eea4d8640061b0d3a3"
+    "revision": "df958cfb1768a2e40eae9f7d86ccf78856c7fa59"
   }
 }

@@ -1,5 +1,11 @@
 # Change log
 
+## [2.0.0-preview.24] - 2024-01-19
+
+### Fixed
+
+* Fixed RenderSpriteToTexture2D not working in builds because of wrong shader name
+
 ## [2.0.0-preview.23] - 2024-01-16
 
 ### Fixed

@@ -394,7 +394,7 @@ namespace Unity.VectorGraphics
             // The rendered sprite is in premultipled form, so we need to convert it back to straight alpha
             // before further processing.
             if (s_DemulMat == null)
-                s_DemulMat = CreateMaterialForShaderName("Unlit/VectorDemultiply", "Packages/com.unity.vectorgraphics/Runtime/Shaders/VectorDemultiply.shader");
+                s_DemulMat = CreateMaterialForShaderName("Hidden/VectorDemultiply", "Packages/com.unity.vectorgraphics/Runtime/Shaders/VectorDemultiply.shader");
 
             desc.msaaSamples = 1;
             var demulTex = RenderTexture.GetTemporary(desc);
