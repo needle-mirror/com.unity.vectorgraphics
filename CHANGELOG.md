@@ -1,5 +1,12 @@
 # Change log
 
+## [2.0.0-preview.25] - 2024-11-06
+
+### Fixed
+
+* (VGB-13) Fixed incorrect VectorImage gradient texture Format in linear project.
+* (VGB-15) Fixed SVG Image Data is not parsed when importing SVG files with binary data that has a MIME type of image/PNG.
+
 ## [2.0.0-preview.24] - 2024-01-19
 
 ### Fixed

@@ -12,7 +12,7 @@ namespace Unity.VectorGraphics
     {
         internal static void MakeVectorImageAsset(IEnumerable<VectorUtils.Geometry> geoms, Rect rect, uint rasterSize, out UnityEngine.Object outAsset, out Texture2D outTexAtlas)
         {
-            var atlas = VectorUtils.GenerateAtlas(geoms, rasterSize, false, false);
+            var atlas = VectorUtils.GenerateAtlas(geoms, rasterSize, false, false, false);
             if (atlas != null)
                 VectorUtils.FillUVs(geoms, atlas);
 

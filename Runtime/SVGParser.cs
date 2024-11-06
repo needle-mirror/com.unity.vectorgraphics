@@ -451,23 +451,9 @@ namespace Unity.VectorGraphics
                         textureFill.Texture = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/" + url);
                         #endif
                     }
-                    else if (lowercaseURL.StartsWith("http://") || lowercaseURL.StartsWith("https://"))
-                    {
-                        #pragma warning disable 618
-                        // WWW is obsolete (replaced with UnityWebRequest), but this is the class that works best
-                        // with editor code. We will continue to use WWW until UnityWebRequest works better in an editor
-                        // environment.
-                        using (WWW www = new WWW(url))
-                        {
-                            while (www.keepWaiting)
-                                System.Threading.Thread.Sleep(10); // Progress bar please...
-                            textureFill.Texture = www.texture;
-                        }
-                        #pragma warning restore 618
-                    }
                     else
                     {
-                        Debug.LogWarning("Unsupported URL scheme for <image> (only http/https is supported): " + url);
+                        Debug.LogWarning("Unsupported URL scheme for <image>: " + url);
                     }
                 }
 
@@ -1941,7 +1927,7 @@ namespace Unity.VectorGraphics
             while (pos < length && dataURI[pos] != ';' && dataURI[pos] != ',')
                 ++pos;
 
-            var mediaType = dataURI.Substring(startPos, pos-startPos);
+            var mediaType = dataURI.Substring(startPos, pos-startPos).ToLower();
             if (mediaType != "image/png" && mediaType != "image/jpeg")
                 return null;
 

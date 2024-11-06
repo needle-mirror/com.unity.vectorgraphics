@@ -419,7 +419,9 @@ namespace Unity.VectorGraphics
                 GL.Clear(false, true, Color.clear);
                 Graphics.Blit(demulTex, expandTex, s_ExpandEdgesMat);
 
-                // Draw the demultiplied sprite again, but over the expanded edges texture
+                // Draw the demultiplied sprite again, but over the expanded edges texture.
+                // The VectorBlendMax shader uses a "max" blend operation, which will keep the original texture in
+                // non-premultiplied alpha.
                 if (s_BlendMat == null)
                     s_BlendMat = CreateMaterialForShaderName("Hidden/VectorBlendMax", "Packages/com.unity.vectorgraphics/Runtime/Shaders/VectorBlendMax.shader");
 
