@@ -6,6 +6,8 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.U2D;
 using UnityEditor.U2D.Interface;
+using UnityEngine.Experimental.Rendering;
+
 #if !(UNITY_2019_3_OR_NEWER)
 using UnityEditor.Experimental.U2D;
 #endif
@@ -33,7 +35,7 @@ namespace Unity.VectorGraphics.Editor
         {
             var format = TextureUtil.GetTextureFormat(tex);
             return "" + tex.width + "x" + tex.height + " " + 
-                TextureUtil.GetTextureFormatString(format) + " " +
+                GraphicsFormatUtility.GetFormatString(format) + " " +
                 EditorUtility.FormatBytes(TextureUtil.GetStorageMemorySizeLong(tex));
         }
     }

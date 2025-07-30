@@ -1,5 +1,12 @@
 # Change log
 
+## [3.0.0-preview.2] - 2025-07-30
+
+Vector Graphics package version 3.0.0-preview.1 is only compatible with Unity 6.3 and later.
+
+Unity 6.3 includes the Vector Graphics APIs and UI Toolkit Vector Image importer built-in. The Vector Graphics package 3.0.0-preview.1
+adds Sprite and UGUI (SVGImage) support.
+
 ## [2.0.0-preview.25] - 2024-11-06
 
 ### Fixed

@@ -68,7 +68,7 @@ namespace Unity.VectorGraphics
         private static GameObject GetOrCreateCanvasGameObject()
         {
             // Check if there is a Canvas in the scene
-            Canvas canvas = Object.FindObjectOfType<Canvas>();
+            Canvas canvas = Object.FindFirstObjectByType<Canvas>();
             if (canvas == null)
             {
                 canvas = CreateCanvasGameObject();
