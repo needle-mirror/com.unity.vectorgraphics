@@ -1,5 +1,17 @@
 # Change log
 
+## [3.0.0-preview.5] - 2026-01-29
+
+ * Updated UGUI dependency to version 2.0.0.
+
+## [3.0.0-preview.4] - 2026-01-29
+
+ * Fixed UGUI SVGImage preview texture for Sprite Editor.
+
+## [3.0.0-preview.3] - 2026-01-19
+
+ * Documentation update.
+
 ## [3.0.0-preview.2] - 2025-07-30
 
 Vector Graphics package version 3.0.0-preview.1 is only compatible with Unity 6.3 and later.

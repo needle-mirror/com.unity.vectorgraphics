@@ -1,11 +1,15 @@
-## Vector Graphics Package
+# Vector Graphics Package
 
-The Vector Graphics package provides an SVG file importer as well as generic vector graphics APIs.
+This package provides SVG import support for Unity Sprites and UGUI.
 
-The SVG importer follows a subset of the [SVG 1.1 specification](https://www.w3.org/TR/SVG11/). Once an SVG file is imported, the vector data is tesselated into triangles and a sprite is generated.  This sprite can then be used by the 2D system.  The source for the SVG importer can be found in the `Editor` folder.
+## When to Use This Package
 
-The vector graphics APIs can be used to create and manipulate vector constructs directly in code.  Read the [documentation](Documentation~/vectorgraphics.md) to get more information.  The source for the vector graphics APIs can be found in the `VectorGraphics` namespace under the `Runtime` folder.
+**Unity 6.3+**: Only install this package if you need **Sprite** or **UGUI** import types. For UI Toolkit and Texture2D, use Unity's [built-in Vector Graphics module](https://docs.unity3d.com/6000.3/Documentation/Manual/ui-systems/work-with-vector-graphics.html).
+
+**Unity 2018.1 - 6.2**: Use version `2.0.0-preview` for full vector graphics support.
+
+## Documentation
+
+For detailed information including migration guides and version requirements, see the [full documentation](Documentation~/vectorgraphics.md).
 
 ![Vector Graphics Screenshot](Documentation~/images/screenshot.png)
-
-Unity version 2018.1 or later is required to use the Vector Graphics package.
