@@ -6,7 +6,6 @@ using System.IO;
 using Unity.Collections;
 using UnityEngine;
 using UnityEditor;
-using UnityEngine.Experimental.U2D;
 using UnityEditor.U2D.Sprites;
 using System.Runtime.CompilerServices;
 using static UnityEditor.U2D.ScriptablePacker;

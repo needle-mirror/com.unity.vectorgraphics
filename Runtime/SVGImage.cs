@@ -1,7 +1,6 @@
 ﻿using System;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.Experimental.U2D;
 using UnityEngine.Rendering;
 using UnityEngine.Scripting.APIUpdating;
 using UnityEngine.U2D;

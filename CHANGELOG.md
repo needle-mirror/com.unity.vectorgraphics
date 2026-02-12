@@ -1,5 +1,11 @@
 # Change log
 
+## [3.0.0-preview.6] - 2026-02-12
+
+### Fixed
+
+* Remove unused 2D namespaces.
+
 ## [3.0.0-preview.5] - 2026-01-29
 
  * Updated UGUI dependency to version 2.0.0.
