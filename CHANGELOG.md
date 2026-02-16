@@ -1,5 +1,11 @@
 # Change log
 
+## [3.0.0-preview.7] - 2026-02-16
+
+### Fixed
+
+* Added missing Vector shaders/materials for backward compatibility.
+
 ## [3.0.0-preview.6] - 2026-02-12
 
 ### Fixed

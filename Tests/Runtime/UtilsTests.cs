@@ -4,6 +4,7 @@ using UnityEngine.TestTools;
 using NUnit.Framework;
 using System.Collections;
 using Unity.VectorGraphics;
+using UnityEditor;
 
 public class UtilsTests
 {
@@ -39,5 +40,39 @@ public class UtilsTests
         Assert.AreEqual((Vector2)sprite.bounds.max, new Vector2(1.0f, 0.5f));
         Assert.AreEqual(5, sprite.vertices.Length);
         Sprite.Destroy(sprite);
+    }
+
+    [Test]
+    public void PackageShadersExist()
+    {
+        var shaderNames = new string[] {
+            "Unlit/Vector",
+            "Unlit/VectorGradient",
+            "Unlit/VectorUI",
+            "Unlit/VectorGradientUI",
+        };
+
+        foreach (var shaderName in shaderNames)
+        {
+            var shader = Shader.Find(shaderName);
+            Assert.NotNull(shader, $"Shader {shaderName} not found");
+        }
+    }
+
+    [Test]
+    public void PackageMaterialsExist()
+    {
+        var materialNames = new string[] {
+            "Unlit_Vector",
+            "Unlit_VectorGradient",
+            "Unlit_VectorUI",
+            "Unlit_VectorGradientUI",
+        };
+        foreach (var materialName in materialNames)
+        {
+            var path = "Packages/com.unity.vectorgraphics/Runtime/Materials/" + materialName + ".mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            Assert.NotNull(material, $"Material {materialName} not found");
+        }
     }
 }

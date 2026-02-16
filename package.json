@@ -1,6 +1,6 @@
 {
   "name": "com.unity.vectorgraphics",
-  "version": "3.0.0-preview.6",
+  "version": "3.0.0-preview.7",
   "unity": "6000.3",
   "unityRelease": "0a5",
   "displayName": "Vector Graphics",
@@ -24,15 +24,15 @@
     "com.unity.modules.vectorgraphics": "1.0.0"
   },
   "_upm": {
-    "changelog": "### Fixed\n\n* Remove unused 2D namespaces."
+    "changelog": "### Fixed\n\n* Added missing Vector shaders/materials for backward compatibility."
   },
   "upmCi": {
-    "footprint": "19f5e43e5c6e1b265449dfa1d1bd5170989cde00"
+    "footprint": "1d800b3fec5687551d91e3efa1933c8819f37272"
   },
   "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.vectorgraphics@3.0/manual/index.html",
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.vectorgraphics.git",
     "type": "git",
-    "revision": "7a6487734f0ff8ef6f58c0c5dd7fb6e06663aa1c"
+    "revision": "d4eda071c4bdc444a6e9041b53b8094a0542eb78"
   }
 }
